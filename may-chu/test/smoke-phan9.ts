@@ -1,0 +1,49 @@
+import 'dotenv/config';
+
+const base = (process.env.BASE_URL ?? 'http://localhost:8080/api/v1').replace(/\/$/, '');
+
+type Json = Record<string, any>;
+
+async function goi(path: string, init?: RequestInit): Promise<{ status: number; json: Json }> {
+  const response = await fetch(`${base}${path}`, init);
+  let json: Json = {};
+  try { json = await response.json() as Json; } catch {}
+  return { status: response.status, json };
+}
+
+function damBao(dieuKien: unknown, thongBao: string): asserts dieuKien {
+  if (!dieuKien) throw new Error(thongBao);
+}
+
+(async () => {
+  const song = await goi('/suc-khoe/song');
+  damBao(song.status === 200 && song.json.thanhCong === true, 'Liveness không đạt.');
+
+  const sanSang = await goi('/suc-khoe/san-sang');
+  damBao(sanSang.status === 200 && sanSang.json.duLieu?.database === 'HOAT_DONG', 'Readiness/database không đạt.');
+
+  const danhMuc = await goi('/thuc-don/danh-muc');
+  damBao(danhMuc.status === 200 && Array.isArray(danhMuc.json.duLieu), 'API danh mục thực đơn lỗi.');
+
+  const email = process.env.SEED_ADMIN_EMAIL;
+  const matKhau = process.env.SEED_ADMIN_PASSWORD;
+  damBao(email && matKhau, 'Thiếu SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD để smoke test Admin.');
+
+  const dangNhap = await goi('/xac-thuc/dang-nhap', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ taiKhoan: email, matKhau }),
+  });
+  const token = dangNhap.json.duLieu?.accessToken as string | undefined;
+  damBao(dangNhap.status === 201 || dangNhap.status === 200, 'Đăng nhập Admin thất bại.');
+  damBao(token, 'Không nhận được access token Admin.');
+
+  const headers = { Authorization: `Bearer ${token}` };
+  const dashboard = await goi('/quan-tri/dashboard', { headers });
+  damBao(dashboard.status === 200 && dashboard.json.thanhCong === true, 'Dashboard Admin lỗi.');
+
+  const quyen = await goi('/quan-tri/quyen', { headers });
+  damBao(quyen.status === 200 && Array.isArray(quyen.json.duLieu), 'API danh mục quyền lỗi.');
+
+  console.log('SMOKE_PHAN_9_OK');
+})();

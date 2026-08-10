@@ -1,0 +1,21 @@
+# Checklist Backend Ready
+
+- [ ] `npm run build` không lỗi
+- [ ] `npm test -- --runInBand` xanh
+- [ ] `npm run test:smoke` -> `SMOKE_PHAN_9_OK`
+- [ ] `npm run test:concurrency` -> `CONCURRENCY_PHAN_9_OK`
+- [ ] `/suc-khoe/song` 200
+- [ ] `/suc-khoe/san-sang` 200 và database `HOAT_DONG`
+- [ ] Swagger mở tại `/api/tai-lieu`
+- [ ] Login / refresh / logout chạy
+- [ ] Đổi mật khẩu chạy và refresh token cũ bị vô hiệu
+- [ ] Quên/đặt lại mật khẩu chạy
+- [ ] RBAC đọc danh mục quyền
+- [ ] RBAC gán quyền role nhân viên chạy
+- [ ] Không sửa được quyền `QUAN_TRI_VIEN`
+- [ ] Booking transaction + overlap 409 chạy
+- [ ] Check-in/hoàn thành đổi trạng thái bàn đúng
+- [ ] Menu public chạy
+- [ ] Khách hàng/nhân viên/dashboard/báo cáo chạy
+- [ ] Response camelCase, ID string, số nghiệp vụ number, cờ boolean
+- [ ] Production không dùng secret/password mặc định

@@ -1,0 +1,12 @@
+package.json
+.env.e2e.example
+playwright.config.ts
+src/cau-hinh/khoa-truy-van.ts
+src/trang/cong-khai/khuyen-mai.tsx
+src/trang/khach-hang/lich-su-dat-ban.tsx
+src/trang/khach-hang/thong-bao.tsx
+e2e/cong-khai.spec.ts
+e2e/responsive.spec.ts
+e2e/quan-tri.spec.ts
+PHAN_14-HUONG-DAN.md
+PHAN_14-DANH-SACH-FILE.txt

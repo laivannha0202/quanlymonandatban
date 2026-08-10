@@ -1,0 +1,13 @@
+package.json
+playwright.config.ts
+.env.e2e.example
+e2e/tro-giup.ts
+e2e/quan-tri.spec.ts
+e2e/sau/bao-ve-va-validation.spec.ts
+e2e/sau/crud-khu-vuc.spec.ts
+e2e/sau/crud-danh-muc.spec.ts
+e2e/sau/crud-mon-an.spec.ts
+e2e/sau/crud-ban-an.spec.ts
+e2e/sau/dat-ban-workflow.spec.ts
+PHAN_15-HUONG-DAN.md
+PHAN_15-DANH-SACH-FILE.txt
