@@ -54,7 +54,7 @@ export function QuanTriDanhMucMon() {
   return <>
     <Space className="page-title-row" wrap><Typography.Title level={2}>Danh mục món</Typography.Title>{coQuanLy ? <Button type="primary" onClick={moTao}>Thêm danh mục</Button> : null}</Space>
     {loi && <Alert type="error" showIcon message={loi} className="mb-16" />}
-    <Card><Table rowKey="id" loading={tai} dataSource={ds} pagination={false} scroll={{ x: 900 }} columns={[
+    <Card className="admin-table-card"><Table rowKey="id" loading={tai} dataSource={ds} pagination={false} scroll={{ x: 900 }} columns={[
       { title: 'Mã', dataIndex: 'maDanhMuc' },
       { title: 'Tên danh mục', dataIndex: 'tenDanhMuc' },
       { title: 'Đường dẫn', dataIndex: 'duongDan' },
@@ -64,8 +64,8 @@ export function QuanTriDanhMucMon() {
       { title: 'Thao tác', render: (_: unknown, r: DanhMucQuanTri) => coQuanLy ? <Space><Button size="small" onClick={() => moSua(r)}>Sửa</Button><Button size="small" danger onClick={() => modal.confirm({ title: 'Xóa danh mục?', content: r.tenDanhMuc, okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: async () => { try { await heThongApi.xoaDanhMuc(r.id); message.success('Đã xóa danh mục'); await taiLai(); } catch (e) { message.error(e instanceof LoiApi ? e.message : 'Không xóa được.'); } } })}>Xóa</Button></Space> : '—' },
     ]} /></Card>
 
-    <Modal open={moForm} title={dangSua ? 'Sửa danh mục' : 'Thêm danh mục'} okText="Lưu" cancelText="Đóng" onCancel={() => setMoForm(false)} onOk={() => form.submit()} destroyOnHidden>
-      <Form form={form} layout="vertical" onFinish={async (v) => {
+    <Modal className="admin-form-modal" open={moForm} title={dangSua ? 'Sửa danh mục' : 'Thêm danh mục'} okText="Lưu" cancelText="Đóng" onCancel={() => setMoForm(false)} onOk={() => form.submit()} destroyOnHidden>
+      <Form size="middle" form={form} layout="vertical" onFinish={async (v) => {
         try {
           if (dangSua) await heThongApi.capNhatDanhMuc(dangSua.id, v);
           else await heThongApi.taoDanhMuc(v);

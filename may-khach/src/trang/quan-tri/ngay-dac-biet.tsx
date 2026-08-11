@@ -85,7 +85,7 @@ export function QuanTriNgayDacBiet() {
       </Space>}
     />
 
-    <Card className="filter-card mb-16">
+    <Card className="filter-card admin-filter-card mb-16">
       <Space wrap align="end">
         <Space direction="vertical" size={4}>
           <Typography.Text>Từ ngày</Typography.Text>
@@ -103,8 +103,7 @@ export function QuanTriNgayDacBiet() {
     </Card>
 
     <CanhBaoLoi loi={query.error} macDinh="Không tải được ngày đặc biệt." />
-    <Card>
-      <Table
+    <Card className="admin-table-card"><Table
         rowKey="id"
         loading={query.isPending || query.isFetching}
         dataSource={query.data ?? []}
@@ -156,7 +155,7 @@ export function QuanTriNgayDacBiet() {
       />
     </Card>
 
-    <Modal
+    <Modal className="admin-form-modal"
       open={moForm}
       title={dangSua ? 'Sửa ngày đặc biệt' : 'Thêm ngày đặc biệt'}
       okText="Lưu"
@@ -169,7 +168,7 @@ export function QuanTriNgayDacBiet() {
       onOk={() => form.submit()}
       destroyOnHidden
     >
-      <Form
+      <Form size="middle"
         form={form}
         layout="vertical"
         onFinish={(duLieu) => luuMutation.mutate({ id: dangSua?.id, duLieu })}

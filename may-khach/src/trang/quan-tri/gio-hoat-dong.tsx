@@ -92,8 +92,7 @@ export function QuanTriGioHoatDong() {
       </Space>}
     />
     <CanhBaoLoi loi={query.error} macDinh="Không tải được giờ hoạt động." />
-    <Card>
-      <Table
+    <Card className="admin-table-card"><Table
         rowKey={(row) => `${row.thuTrongTuan}-${row.caSo}`}
         loading={query.isPending || query.isFetching}
         dataSource={query.data ?? []}
@@ -144,7 +143,7 @@ export function QuanTriGioHoatDong() {
       />
     </Card>
 
-    <Modal
+    <Modal className="admin-form-modal"
       open={moForm}
       title={dangSua ? 'Sửa ca hoạt động' : 'Thêm ca hoạt động'}
       okText="Lưu"
@@ -157,7 +156,7 @@ export function QuanTriGioHoatDong() {
       onOk={() => form.submit()}
       destroyOnHidden
     >
-      <Form form={form} layout="vertical" onFinish={(values) => luuMutation.mutate(values)}>
+      <Form size="middle" form={form} layout="vertical" onFinish={(values) => luuMutation.mutate(values)}>
         <Space className="form-row" align="start" wrap>
           <Form.Item name="thuTrongTuan" label="Ngày trong tuần" rules={[{ required: true }]}>
             <Select

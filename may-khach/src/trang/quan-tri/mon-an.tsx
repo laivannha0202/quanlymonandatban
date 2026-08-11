@@ -147,7 +147,7 @@ export function QuanTriMonAn() {
       moTa="Quản lý thông tin, giá, trạng thái bán và bộ hình ảnh của từng món."
       hanhDong={coQuanLy ? <Button type="primary" icon={<PlusOutlined />} onClick={moTao}>Thêm món ăn</Button> : undefined}
     />
-    <Card className="filter-card mb-16">
+    <Card className="filter-card admin-filter-card mb-16">
       <Space wrap>
         <Input.Search allowClear placeholder="Mã / tên món" onSearch={setTuKhoa} style={{ width: 240 }} />
         <Select allowClear placeholder="Danh mục" value={danhMucId} onChange={setDanhMucId} style={{ width: 200 }} options={(danhMucQuery.data ?? []).map((x) => ({ value: x.id, label: x.tenDanhMuc }))} />
@@ -161,7 +161,7 @@ export function QuanTriMonAn() {
       </Space>
     </Card>
     <CanhBaoLoi loi={monQuery.error ?? danhMucQuery.error} macDinh="Không tải được món ăn." />
-    <Card><Table
+    <Card className="admin-table-card"><Table
       rowKey="id"
       loading={monQuery.isPending || monQuery.isFetching}
       dataSource={monQuery.data?.danhSach ?? []}
@@ -185,8 +185,8 @@ export function QuanTriMonAn() {
       ]}
     /></Card>
 
-    <Modal width={720} open={moForm} title={dangSua ? 'Sửa món ăn' : 'Thêm món ăn'} okText="Lưu" cancelText="Đóng" confirmLoading={luuMutation.isPending} onCancel={() => setMoForm(false)} onOk={() => form.submit()} destroyOnHidden>
-      <Form form={form} layout="vertical" onFinish={(v) => luuMutation.mutate({ id: dangSua?.id, duLieu: v })}>
+    <Modal className="admin-form-modal" width={720} open={moForm} title={dangSua ? 'Sửa món ăn' : 'Thêm món ăn'} okText="Lưu" cancelText="Đóng" confirmLoading={luuMutation.isPending} onCancel={() => setMoForm(false)} onOk={() => form.submit()} destroyOnHidden>
+      <Form size="middle" form={form} layout="vertical" onFinish={(v) => luuMutation.mutate({ id: dangSua?.id, duLieu: v })}>
         <Space className="form-row" align="start" wrap>
           <Form.Item name="maMon" label="Mã món" rules={[{ required: true, message: 'Nhập mã món' }]}><Input maxLength={30} /></Form.Item>
           <Form.Item name="danhMucId" label="Danh mục" rules={[{ required: true, message: 'Chọn danh mục' }]}><Select style={{ minWidth: 220 }} options={(danhMucQuery.data ?? []).filter((x) => x.trangThai === 'HOAT_DONG' || x.id === dangSua?.danhMucId).map((x) => ({ value: x.id, label: x.tenDanhMuc }))} /></Form.Item>
@@ -207,7 +207,7 @@ export function QuanTriMonAn() {
       </Form>
     </Modal>
 
-    <Drawer width={620} open={Boolean(monAnhId)} onClose={() => setMonAnhId(null)} title={`Hình ảnh · ${chiTietQuery.data?.tenMon ?? ''}`} extra={coQuanLy ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { formHinh.resetFields(); formHinh.setFieldsValue({ thuTu: 0, laAnhChinh: false }); setMoThemHinh(true); }}>Thêm ảnh</Button> : null}>
+    <Drawer className="admin-detail-drawer" width={620} open={Boolean(monAnhId)} onClose={() => setMonAnhId(null)} title={`Hình ảnh · ${chiTietQuery.data?.tenMon ?? ''}`} extra={coQuanLy ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { formHinh.resetFields(); formHinh.setFieldsValue({ thuTu: 0, laAnhChinh: false }); setMoThemHinh(true); }}>Thêm ảnh</Button> : null}>
       <CanhBaoLoi loi={chiTietQuery.error} macDinh="Không tải được hình ảnh món." />
       <List
         loading={chiTietQuery.isPending || chiTietQuery.isFetching}
@@ -227,8 +227,8 @@ export function QuanTriMonAn() {
       <div className="image-manager-note">Hiện Backend quản lý ảnh bằng URL/path. Upload file vật lý sẽ chỉ bật khi có storage endpoint riêng, tránh giả lập upload ở Frontend.</div>
     </Drawer>
 
-    <Modal open={moThemHinh} title="Thêm hình ảnh món" okText="Thêm ảnh" cancelText="Đóng" confirmLoading={themHinhMutation.isPending} onCancel={() => setMoThemHinh(false)} onOk={() => formHinh.submit()} destroyOnHidden>
-      <Form form={formHinh} layout="vertical" onFinish={(v) => monAnhId && themHinhMutation.mutate({ id: monAnhId, duLieu: v })}>
+    <Modal className="admin-form-modal" open={moThemHinh} title="Thêm hình ảnh món" okText="Thêm ảnh" cancelText="Đóng" confirmLoading={themHinhMutation.isPending} onCancel={() => setMoThemHinh(false)} onOk={() => formHinh.submit()} destroyOnHidden>
+      <Form size="middle" form={formHinh} layout="vertical" onFinish={(v) => monAnhId && themHinhMutation.mutate({ id: monAnhId, duLieu: v })}>
         <Form.Item name="duongDanAnh" label="URL/path hình ảnh" rules={[{ required: true, message: 'Nhập URL/path hình ảnh' }]}><Input maxLength={500} /></Form.Item>
         <Form.Item name="altText" label="Mô tả ảnh"><Input maxLength={255} /></Form.Item>
         <Space className="form-row" align="start" wrap>

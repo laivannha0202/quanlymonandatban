@@ -20,7 +20,7 @@ export function QuanTriVaiTro() {
     <Typography.Title level={2}>Vai trò & phân quyền</Typography.Title>
     {loi && <Alert type="error" showIcon message={loi} className="mb-16" />}
     <Space align="start" size="large" className="rbac-layout" wrap>
-      <Card title="Vai trò" className="rbac-role-list">{vaiTro.length === 0 ? <Empty /> : <Space direction="vertical" style={{ width: '100%' }}>{vaiTro.map((v) => <Button key={v.id} type={dangChon?.id === v.id ? 'primary' : 'default'} block onClick={() => chonVaiTro(v)}>{v.tenVaiTro}</Button>)}</Space>}</Card>
+      <Card className="admin-section-card rbac-role-list" title="Vai trò">{vaiTro.length === 0 ? <Empty /> : <Space direction="vertical" style={{ width: '100%' }}>{vaiTro.map((v) => <Button key={v.id} type={dangChon?.id === v.id ? 'primary' : 'default'} block onClick={() => chonVaiTro(v)}>{v.tenVaiTro}</Button>)}</Space>}</Card>
       <Card title={dangChon ? `Quyền của ${dangChon.tenVaiTro}` : 'Quyền'} className="rbac-permissions">
         {dangChon?.maVaiTro === 'QUAN_TRI_VIEN' && <Alert type="info" showIcon message="Vai trò QUAN_TRI_VIEN được backend bảo vệ và không cho chỉnh quyền." className="mb-16" />}
         <Checkbox.Group value={maQuyens} onChange={(v) => setMaQuyens(v.map(String))} disabled={dangChon?.maVaiTro === 'QUAN_TRI_VIEN'} style={{ width: '100%' }}>

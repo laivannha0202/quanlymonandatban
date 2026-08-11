@@ -74,7 +74,7 @@ export function QuanTriKhuVuc() {
         ? <Button type="primary" icon={<PlusOutlined />} onClick={moTao}>Thêm khu vực</Button>
         : undefined}
     />
-    <Card className="filter-card mb-16">
+    <Card className="filter-card admin-filter-card mb-16">
       <Space wrap>
         <Input.Search allowClear placeholder="Mã / tên khu vực" onSearch={setTuKhoa} style={{ width: 260 }} />
         <Select allowClear placeholder="Trạng thái" value={trangThai} onChange={setTrangThai} style={{ width: 190 }} options={[
@@ -85,8 +85,7 @@ export function QuanTriKhuVuc() {
       </Space>
     </Card>
     <CanhBaoLoi loi={query.error} macDinh="Không tải được khu vực." />
-    <Card>
-      <Table
+    <Card className="admin-table-card"><Table
         rowKey="id"
         loading={query.isPending || query.isFetching}
         dataSource={query.data ?? []}
@@ -111,7 +110,7 @@ export function QuanTriKhuVuc() {
       />
     </Card>
 
-    <Modal
+    <Modal className="admin-form-modal"
       open={moForm}
       title={dangSua ? 'Sửa khu vực' : 'Thêm khu vực'}
       okText="Lưu"
@@ -121,7 +120,7 @@ export function QuanTriKhuVuc() {
       onOk={() => form.submit()}
       destroyOnHidden
     >
-      <Form form={form} layout="vertical" onFinish={(v) => luuMutation.mutate({ id: dangSua?.id, duLieu: v })}>
+      <Form size="middle" form={form} layout="vertical" onFinish={(v) => luuMutation.mutate({ id: dangSua?.id, duLieu: v })}>
         <Form.Item name="maKhuVuc" label="Mã khu vực" rules={[{ required: true, message: 'Nhập mã khu vực' }]}><Input maxLength={30} /></Form.Item>
         <Form.Item name="tenKhuVuc" label="Tên khu vực" rules={[{ required: true, message: 'Nhập tên khu vực' }]}><Input maxLength={150} /></Form.Item>
         <Form.Item name="moTa" label="Mô tả"><Input.TextArea rows={3} /></Form.Item>

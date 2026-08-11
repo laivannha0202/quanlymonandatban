@@ -41,6 +41,7 @@ jobs:
     env:
       CI: "true"
       NODE_ENV: test
+      E2E_MODE: "true"
       PORT: "8080"
       DATABASE_URL: mysql://quanly_ci:ci_app_password_only@127.0.0.1:3306/quan_ly_nha_hang_ci
       JWT_ACCESS_SECRET: ci_access_secret_only_32_chars_minimum_2026

@@ -68,7 +68,7 @@ export function QuanTriKhachHang() {
       hanhDong={<Button icon={<ReloadOutlined />} onClick={() => query.refetch()}>Làm mới</Button>}
     />
 
-    <Card className="filter-card mb-16">
+    <Card className="filter-card admin-filter-card mb-16">
       <Space wrap>
         <Input.Search
           allowClear
@@ -92,8 +92,7 @@ export function QuanTriKhachHang() {
     </Card>
 
     <CanhBaoLoi loi={query.error} macDinh="Không tải được khách hàng." />
-    <Card>
-      <Table
+    <Card className="admin-table-card"><Table
         rowKey="id"
         loading={query.isPending || query.isFetching}
         dataSource={query.data?.danhSach ?? []}
@@ -136,7 +135,7 @@ export function QuanTriKhachHang() {
       />
     </Card>
 
-    <Modal
+    <Modal className="admin-form-modal"
       open={Boolean(dangSua)}
       title="Sửa khách hàng"
       okText="Lưu"
@@ -146,7 +145,7 @@ export function QuanTriKhachHang() {
       onOk={() => form.submit()}
       destroyOnHidden
     >
-      <Form
+      <Form size="middle"
         form={form}
         layout="vertical"
         onFinish={(duLieu) => {

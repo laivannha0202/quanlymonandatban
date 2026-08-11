@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './co-so-du-lieu/prisma.module';
@@ -30,7 +30,20 @@ import { XacThucModule } from './mo-dun/xac-thuc/xac-thuc.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: kiemTraBienMoiTruong }),
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const laE2E = configService.get<string>('E2E_MODE') === 'true';
+        return [
+          {
+            name: 'default',
+            ttl: 60_000,
+            limit: laE2E ? 5_000 : 120,
+          },
+        ];
+      },
+    }),
     PrismaModule,
     XacThucModule,
     VaiTroModule,

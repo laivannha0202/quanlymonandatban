@@ -55,7 +55,7 @@ export function QuanTriDatBan() {
 
   return <>
     <TieuDeTrang tieuDe="Quản lý đặt bàn" moTa="Xác nhận, check-in, hoàn thành và xử lý ngoại lệ theo đúng state machine Backend." />
-    <Card className="filter-card mb-16"><Space wrap>
+    <Card className="filter-card admin-filter-card mb-16"><Space wrap>
       <Input.Search allowClear placeholder="Mã / tên / số điện thoại" onSearch={setTuKhoa} style={{ width: 290 }} />
       <Select allowClear placeholder="Trạng thái" style={{ width: 190 }} value={trangThai} onChange={setTrangThai} options={[
         { value: 'CHO_XAC_NHAN', label: 'Chờ xác nhận' }, { value: 'DA_XAC_NHAN', label: 'Đã xác nhận' }, { value: 'DA_CHECK_IN', label: 'Đã check-in' },
@@ -64,7 +64,7 @@ export function QuanTriDatBan() {
       <Button icon={<ReloadOutlined />} onClick={() => query.refetch()}>Làm mới</Button>
     </Space></Card>
     <CanhBaoLoi loi={query.error} macDinh="Không tải được đặt bàn." />
-    <Card><Table
+    <Card className="admin-table-card"><Table
       rowKey="id"
       loading={query.isPending || query.isFetching}
       dataSource={query.data?.danhSach ?? []}

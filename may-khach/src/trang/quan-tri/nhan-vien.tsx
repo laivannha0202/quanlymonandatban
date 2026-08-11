@@ -169,7 +169,7 @@ export function QuanTriNhanVien() {
       </Space>}
     />
 
-    <Card className="filter-card mb-16">
+    <Card className="filter-card admin-filter-card mb-16">
       <Space wrap>
         <Input.Search
           allowClear
@@ -201,8 +201,7 @@ export function QuanTriNhanVien() {
     </Card>
 
     <CanhBaoLoi loi={query.error || vaiTroQuery.error} macDinh="Không tải được nhân viên." />
-    <Card>
-      <Table
+    <Card className="admin-table-card"><Table
         rowKey="id"
         loading={query.isPending || query.isFetching}
         dataSource={query.data?.danhSach ?? []}
@@ -265,7 +264,7 @@ export function QuanTriNhanVien() {
       />
     </Card>
 
-    <Modal
+    <Modal className="admin-form-modal"
       open={moForm}
       width={720}
       title={dangSua ? 'Sửa nhân viên' : 'Thêm nhân viên'}
@@ -279,7 +278,7 @@ export function QuanTriNhanVien() {
       onOk={() => form.submit()}
       destroyOnHidden
     >
-      <Form
+      <Form size="middle"
         form={form}
         layout="vertical"
         onFinish={(values) => luuMutation.mutate({ id: dangSua?.id, values })}

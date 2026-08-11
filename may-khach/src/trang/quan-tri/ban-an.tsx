@@ -97,7 +97,7 @@ export function QuanTriBanAn() {
   };
 
   const tabBan = <>
-    <Card className="filter-card mb-16">
+    <Card className="filter-card admin-filter-card mb-16">
       <Space wrap>
         <Input.Search allowClear placeholder="Mã / tên bàn" onSearch={setTuKhoa} style={{ width: 230 }} />
         <Select allowClear placeholder="Khu vực" value={khuVucId} onChange={setKhuVucId} style={{ width: 200 }} options={(khuVucQuery.data ?? []).map((x) => ({ value: x.id, label: x.tenKhuVuc }))} />
@@ -108,7 +108,7 @@ export function QuanTriBanAn() {
       </Space>
     </Card>
     <CanhBaoLoi loi={banQuery.error ?? khuVucQuery.error} macDinh="Không tải được bàn ăn." />
-    <Card><Table
+    <Card className="admin-table-card"><Table
       rowKey="id"
       loading={banQuery.isPending || banQuery.isFetching}
       dataSource={banQuery.data?.danhSach ?? []}
@@ -134,7 +134,7 @@ export function QuanTriBanAn() {
 
   const tabLienKet = <>
     <CanhBaoLoi loi={lienKetQuery.error} macDinh="Không tải được liên kết bàn." />
-    <Card><Table
+    <Card className="admin-table-card"><Table
       rowKey="id"
       loading={lienKetQuery.isPending || lienKetQuery.isFetching}
       dataSource={lienKetQuery.data ?? []}
@@ -161,8 +161,8 @@ export function QuanTriBanAn() {
       { key: 'lien-ket', label: <span>Liên kết ghép bàn <Tag>{lienKetQuery.data?.length ?? 0}</Tag></span>, children: tabLienKet },
     ]} />
 
-    <Modal open={moFormBan} title={dangSua ? 'Sửa bàn ăn' : 'Thêm bàn ăn'} okText="Lưu" cancelText="Đóng" confirmLoading={luuBan.isPending} onCancel={() => setMoFormBan(false)} onOk={() => formBan.submit()} destroyOnHidden>
-      <Form form={formBan} layout="vertical" onFinish={(v) => luuBan.mutate({ id: dangSua?.id, duLieu: v })}>
+    <Modal className="admin-form-modal" open={moFormBan} title={dangSua ? 'Sửa bàn ăn' : 'Thêm bàn ăn'} okText="Lưu" cancelText="Đóng" confirmLoading={luuBan.isPending} onCancel={() => setMoFormBan(false)} onOk={() => formBan.submit()} destroyOnHidden>
+      <Form size="middle" form={formBan} layout="vertical" onFinish={(v) => luuBan.mutate({ id: dangSua?.id, duLieu: v })}>
         <Space className="form-row" align="start" wrap>
           <Form.Item name="maBan" label="Mã bàn" rules={[{ required: true, message: 'Nhập mã bàn' }]}><Input maxLength={30} /></Form.Item>
           <Form.Item name="tenBan" label="Tên bàn" rules={[{ required: true, message: 'Nhập tên bàn' }]}><Input maxLength={100} /></Form.Item>
@@ -183,8 +183,8 @@ export function QuanTriBanAn() {
       </Form>
     </Modal>
 
-    <Modal open={moFormLienKet} title="Liên kết hai bàn" okText="Tạo liên kết" cancelText="Đóng" confirmLoading={taoLienKet.isPending} onCancel={() => setMoFormLienKet(false)} onOk={() => formLienKet.submit()} destroyOnHidden>
-      <Form form={formLienKet} layout="vertical" onFinish={(v) => taoLienKet.mutate(v)}>
+    <Modal className="admin-form-modal" open={moFormLienKet} title="Liên kết hai bàn" okText="Tạo liên kết" cancelText="Đóng" confirmLoading={taoLienKet.isPending} onCancel={() => setMoFormLienKet(false)} onOk={() => formLienKet.submit()} destroyOnHidden>
+      <Form size="middle" form={formLienKet} layout="vertical" onFinish={(v) => taoLienKet.mutate(v)}>
         <Form.Item name="ban1Id" label="Bàn 1" rules={[{ required: true, message: 'Chọn bàn 1' }]}><Select showSearch optionFilterProp="label" options={(banQuery.data?.danhSach ?? []).map((x) => ({ value: x.id, label: `${x.maBan} · ${x.tenBan} · ${tenKhuVuc.get(x.khuVucId) || x.khuVucId}` }))} /></Form.Item>
         <Form.Item name="ban2Id" label="Bàn 2" rules={[{ required: true, message: 'Chọn bàn 2' }]}><Select showSearch optionFilterProp="label" options={(banQuery.data?.danhSach ?? []).map((x) => ({ value: x.id, label: `${x.maBan} · ${x.tenBan} · ${tenKhuVuc.get(x.khuVucId) || x.khuVucId}` }))} /></Form.Item>
         <Form.Item name="coTheGhep" label="Cho phép ghép" valuePropName="checked"><Switch /></Form.Item>

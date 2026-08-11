@@ -1,31 +1,91 @@
-import { Alert, Button, Card, Form, Input, Typography } from 'antd';
+import {
+  ArrowLeftOutlined,
+  CheckCircleOutlined,
+  LockOutlined,
+} from '@ant-design/icons';
+import { Alert, Button, Form, Input, Result, Space } from 'antd';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { LoiApi } from '@/dich-vu/http';
 import { xacThucApi } from '@/dich-vu/xac-thuc.api';
+import { KhungXacThuc } from '@/thanh-phan/khung-xac-thuc';
 
 export function DatLaiMatKhau() {
   const [params] = useSearchParams();
   const [thanhCong, setThanhCong] = useState(false);
   const [loi, setLoi] = useState('');
+  const [tai, setTai] = useState(false);
   const tokenMacDinh = params.get('token') || '';
 
-  return <div className="auth-wrap"><Card className="auth-card">
-    <Typography.Title level={2}>Đặt lại mật khẩu</Typography.Title>
-    {loi && <Alert type="error" showIcon message={loi} className="mb-16" />}
-    {thanhCong ? <>
-      <Alert type="success" showIcon message="Mật khẩu đã được thay đổi." className="mb-16" />
-      <Link to="/dang-nhap">Quay lại đăng nhập</Link>
-    </> : <Form layout="vertical" initialValues={{ token: tokenMacDinh }} onFinish={async (v: { token: string; matKhauMoi: string; xacNhan: string }) => {
-      setLoi('');
-      if (v.matKhauMoi !== v.xacNhan) { setLoi('Mật khẩu xác nhận không khớp.'); return; }
-      try { await xacThucApi.datLaiMatKhau(v.token.trim(), v.matKhauMoi); setThanhCong(true); }
-      catch (e) { setLoi(e instanceof LoiApi ? e.message : 'Không đặt lại được mật khẩu.'); }
-    }}>
-      <Form.Item name="token" label="Token đặt lại mật khẩu" rules={[{ required: true, min: 32 }]}><Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} /></Form.Item>
-      <Form.Item name="matKhauMoi" label="Mật khẩu mới" rules={[{ required: true, min: 8 }]}><Input.Password /></Form.Item>
-      <Form.Item name="xacNhan" label="Nhập lại mật khẩu" rules={[{ required: true }]}><Input.Password /></Form.Item>
-      <Button type="primary" htmlType="submit" block>Đặt lại mật khẩu</Button>
-    </Form>}
-  </Card></div>;
+  return (
+    <KhungXacThuc
+      eyebrow="BẢO MẬT TÀI KHOẢN"
+      tieuDe="Đặt lại mật khẩu"
+      moTa="Chọn mật khẩu mới cho tài khoản của bạn."
+    >
+      {loi && <Alert type="error" showIcon message={loi} className="mb-16" />}
+
+      {thanhCong ? (
+        <Result
+          status="success"
+          icon={<CheckCircleOutlined />}
+          title="Mật khẩu đã được thay đổi"
+          subTitle="Bạn có thể đăng nhập lại bằng mật khẩu mới."
+          extra={<Link to="/dang-nhap"><Button type="primary">Đăng nhập</Button></Link>}
+        />
+      ) : (
+        <Form
+          layout="vertical"
+          size="large"
+          initialValues={{ token: tokenMacDinh }}
+          requiredMark={false}
+          onFinish={async (v: { token: string; matKhauMoi: string; xacNhan: string }) => {
+            setLoi('');
+            if (v.matKhauMoi !== v.xacNhan) {
+              setLoi('Mật khẩu xác nhận không khớp.');
+              return;
+            }
+
+            setTai(true);
+            try {
+              await xacThucApi.datLaiMatKhau(v.token.trim(), v.matKhauMoi);
+              setThanhCong(true);
+            } catch (e) {
+              setLoi(e instanceof LoiApi ? e.message : 'Không đặt lại được mật khẩu.');
+            } finally {
+              setTai(false);
+            }
+          }}
+        >
+          <Form.Item name="token" label="Token đặt lại mật khẩu" rules={[{ required: true, min: 32 }]}>
+            <Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} />
+          </Form.Item>
+          <Form.Item name="matKhauMoi" label="Mật khẩu mới" rules={[{ required: true }, { min: 8 }]}>
+            <Input.Password prefix={<LockOutlined />} autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item
+            name="xacNhan"
+            label="Nhập lại mật khẩu"
+            dependencies={['matKhauMoi']}
+            rules={[
+              { required: true },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('matKhauMoi') === value) return Promise.resolve();
+                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp.'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} autoComplete="new-password" />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" block loading={tai}>Đặt lại mật khẩu</Button>
+        </Form>
+      )}
+
+      {!thanhCong ? (
+        <Space className="auth-back-link"><ArrowLeftOutlined /><Link to="/dang-nhap">Quay lại đăng nhập</Link></Space>
+      ) : null}
+    </KhungXacThuc>
+  );
 }

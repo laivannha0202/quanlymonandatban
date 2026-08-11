@@ -63,7 +63,7 @@ export function QuanTriKhuyenMai() {
   return <>
     <Space className="page-title-row" wrap><Typography.Title level={2}>Khuyến mãi</Typography.Title>{coQuanLy ? <Button type="primary" onClick={moTao}>Thêm khuyến mãi</Button> : null}</Space>
     {loi && <Alert type="error" showIcon message={loi} className="mb-16" />}
-    <Card><Table rowKey="id" loading={tai} dataSource={ds} scroll={{ x: 1150 }} columns={[
+    <Card className="admin-table-card"><Table rowKey="id" loading={tai} dataSource={ds} scroll={{ x: 1150 }} columns={[
       { title: 'Mã', dataIndex: 'maKhuyenMai' }, { title: 'Tên', dataIndex: 'tenKhuyenMai' },
       { title: 'Mức giảm', render: (_: unknown, r: KhuyenMai) => <Tag color="red">{r.loaiGiam === 'PHAN_TRAM' ? `${r.giaTri}%` : tien.format(r.giaTri)}</Tag> },
       { title: 'Bắt đầu', dataIndex: 'ngayBatDau', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
@@ -72,8 +72,8 @@ export function QuanTriKhuyenMai() {
       { title: 'Thao tác', fixed: 'right', render: (_: unknown, r: KhuyenMai) => coQuanLy ? <Space><Button size="small" onClick={() => moSua(r)}>Sửa</Button><Button size="small" danger onClick={() => modal.confirm({ title: 'Xóa khuyến mãi?', content: r.tenKhuyenMai, okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: async () => { try { await heThongApi.xoaKhuyenMai(r.id); message.success('Đã xóa'); await taiLai(); } catch (e) { message.error(e instanceof LoiApi ? e.message : 'Không xóa được.'); } } })}>Xóa</Button></Space> : '—' },
     ]} /></Card>
 
-    <Modal open={moForm} width={720} title={dangSua ? 'Sửa khuyến mãi' : 'Thêm khuyến mãi'} okText="Lưu" cancelText="Đóng" onCancel={() => setMoForm(false)} onOk={() => form.submit()} destroyOnHidden>
-      <Form form={form} layout="vertical" onFinish={async (v) => {
+    <Modal className="admin-form-modal" open={moForm} width={720} title={dangSua ? 'Sửa khuyến mãi' : 'Thêm khuyến mãi'} okText="Lưu" cancelText="Đóng" onCancel={() => setMoForm(false)} onOk={() => form.submit()} destroyOnHidden>
+      <Form size="middle" form={form} layout="vertical" onFinish={async (v) => {
         const payload = { ...v, ngayBatDau: new Date(v.ngayBatDau).toISOString(), ngayKetThuc: new Date(v.ngayKetThuc).toISOString() };
         try { if (dangSua) await heThongApi.capNhatKhuyenMai(dangSua.id, payload); else await heThongApi.taoKhuyenMai(payload); message.success('Đã lưu khuyến mãi'); setMoForm(false); await taiLai(); }
         catch (e) { message.error(e instanceof LoiApi ? e.message : 'Không lưu được khuyến mãi.'); }

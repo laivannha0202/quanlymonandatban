@@ -26,6 +26,16 @@ export function kiemTraBienMoiTruong(config: Record<string, unknown>): Record<st
   }
 
   const nodeEnv = String(config.NODE_ENV ?? 'development');
+  const e2eMode = String(config.E2E_MODE ?? 'false').toLowerCase();
+
+  if (!['true', 'false'].includes(e2eMode)) {
+    throw new Error('E2E_MODE chỉ nhận true hoặc false.');
+  }
+
+  if (nodeEnv === 'production' && e2eMode === 'true') {
+    throw new Error('Không được bật E2E_MODE trong production.');
+  }
+
   if (nodeEnv === 'production') {
     const cam = ['changeme', 'secret', 'admin@nhahang.local', 'Admin@123456'];
     const giaTriCanKiemTra = [

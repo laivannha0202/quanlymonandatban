@@ -102,7 +102,7 @@ export function QuanTriCauHinh() {
     />
     <CanhBaoLoi loi={query.error} macDinh="Không tải được cấu hình hệ thống." />
     <Card loading={query.isPending}>
-      <Form form={form} layout="vertical" onFinish={(values) => mutation.mutate(values)}>
+      <Form size="middle" form={form} layout="vertical" onFinish={(values) => mutation.mutate(values)}>
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
           {cacNhom.map(([nhom, danhSach]) => <Card
             key={nhom}

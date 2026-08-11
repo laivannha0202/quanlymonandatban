@@ -8,7 +8,9 @@ test.describe('Khu quản trị', () => {
 
   test('admin đăng nhập và mở dashboard', async ({ page }) => {
     await dangNhapQuanTriQuaGiaoDien(page);
-    await expect(page.getByText(/tổng quan hôm nay/i)).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Hôm nay tại nhà hàng', exact: true }),
+    ).toBeVisible();
     await expect(page.getByText(/đặt bàn/i).first()).toBeVisible();
   });
 });
