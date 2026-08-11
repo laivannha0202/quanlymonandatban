@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import { gioThanhPhut, laNgayHopLe } from '../../dung-chung/tien-ich/ngay-gio';
+import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
 import { CapNhatNgayDacBietDto } from './dto/cap-nhat-ngay-dac-biet.dto';
 import { TaoNgayDacBietDto } from './dto/tao-ngay-dac-biet.dto';
 
@@ -102,6 +103,28 @@ export class NgayDacBietService {
       throw new LoiNghiepVuException('NGAY_DAC_BIET_004', 'Không tìm thấy ngày đặc biệt.', HttpStatus.NOT_FOUND);
     }
 
+    if (
+      dto.ngay &&
+      dto.ngay !== hienTai.ngay
+    ) {
+      const trungNgay =
+        await this.layTheoNgay(
+          dto.ngay,
+        );
+
+      if (
+        trungNgay &&
+        trungNgay.id.toString() !==
+          hienTai.id.toString()
+      ) {
+        throw new LoiNghiepVuException(
+          'NGAY_DAC_BIET_003',
+          'Ngày này đã có cấu hình đặc biệt.',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
     const duLieu: TaoNgayDacBietDto = {
       ngay: dto.ngay ?? hienTai.ngay,
       tenSuKien: dto.tenSuKien ?? hienTai.ten_su_kien,
@@ -123,14 +146,25 @@ export class NgayDacBietService {
       duLieu.dongCuaCaNgay ? null : `${duLieu.gioMoCua}:00`,
       duLieu.dongCuaCaNgay ? null : `${duLieu.gioDongCua}:00`,
       duLieu.ghiChu ?? null,
-      BigInt(id),
+      bigintTuChuoi(
+        id,
+        'ID ngày đặc biệt',
+      ),
     );
 
     return this.layTheoId(id);
   }
 
   async xoa(id: string) {
-    const ketQua = await this.prisma.ngay_nghi_dac_biet.deleteMany({ where: { id: BigInt(id) } });
+    const ketQua =
+      await this.prisma.ngay_nghi_dac_biet.deleteMany({
+        where: {
+          id: bigintTuChuoi(
+            id,
+            'ID ngày đặc biệt',
+          ),
+        },
+      });
     if (!ketQua.count) {
       throw new LoiNghiepVuException('NGAY_DAC_BIET_004', 'Không tìm thấy ngày đặc biệt.', HttpStatus.NOT_FOUND);
     }
@@ -144,7 +178,12 @@ export class NgayDacBietService {
         IF(gio_dong_cua IS NULL, NULL, TIME_FORMAT(gio_dong_cua, '%H:%i')) AS gio_dong_cua,
         ghi_chu
       FROM ngay_nghi_dac_biet WHERE id = ? LIMIT 1
-    `, BigInt(id));
+    `,
+      bigintTuChuoi(
+        id,
+        'ID ngày đặc biệt',
+      ),
+    );
     return ketQua[0] ?? null;
   }
 

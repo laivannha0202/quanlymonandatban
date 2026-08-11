@@ -1,14 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class TaoNhanVienDto {
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(30)
   maNhanVien!: string;
 
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(150)
   hoTen!: string;
 

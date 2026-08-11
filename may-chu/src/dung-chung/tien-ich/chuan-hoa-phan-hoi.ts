@@ -9,6 +9,8 @@ const KHOA_BOOLEAN = new Set([
   'da_doc',
   'cho_phep_sua',
   'da_su_dung',
+  'hoat_dong',
+  'dong_cua_ca_ngay',
 ]);
 
 const KHOA_SO = new Set([
@@ -24,6 +26,7 @@ const KHOA_SO = new Set([
   'tong',
   'tong_trang',
   'tong_ban_ghi',
+  'thu_trong_tuan',
 ]);
 
 function snakeSangCamel(khoa: string): string {

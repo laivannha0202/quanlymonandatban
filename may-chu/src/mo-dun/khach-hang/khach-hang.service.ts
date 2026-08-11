@@ -168,6 +168,30 @@ export class KhachHangService {
       }
     }
 
+    const taiKhoanId = cu.tai_khoan_id
+      ? BigInt(String(cu.tai_khoan_id))
+      : null;
+
+    if (
+      dto.email !== undefined &&
+      taiKhoanId &&
+      dto.email !== cu.email_tai_khoan
+    ) {
+      const trung = await this.prisma.$queryRawUnsafe<Array<{ id: bigint }>>(
+        'SELECT id FROM tai_khoan WHERE email = ? AND id <> ? AND ngay_xoa IS NULL LIMIT 1',
+        dto.email,
+        taiKhoanId,
+      );
+
+      if (trung.length) {
+        throw new LoiNghiepVuException(
+          'KHACH_HANG_003',
+          'Email đã được tài khoản khác sử dụng.',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
     const capNhat: Array<[string, unknown]> = [];
     if (dto.hoTen !== undefined) capNhat.push(['ho_ten', dto.hoTen]);
     if (dto.soDienThoai !== undefined) capNhat.push(['so_dien_thoai', dto.soDienThoai]);
@@ -176,14 +200,32 @@ export class KhachHangService {
     if (dto.gioiTinh !== undefined) capNhat.push(['gioi_tinh', dto.gioiTinh]);
     if (dto.ghiChu !== undefined) capNhat.push(['ghi_chu', dto.ghiChu]);
 
-    if (capNhat.length) {
-      const setSql = capNhat.map(([cot]) => `${cot} = ?`).join(', ');
-      await this.prisma.$executeRawUnsafe(
-        `UPDATE khach_hang SET ${setSql} WHERE id = ? AND ngay_xoa IS NULL`,
-        ...capNhat.map(([, giaTri]) => giaTri),
-        khachHangId,
-      );
-    }
+    await this.prisma.$transaction(async (tx) => {
+      if (capNhat.length) {
+        const setSql = capNhat.map(([cot]) => `${cot} = ?`).join(', ');
+        await tx.$executeRawUnsafe(
+          `UPDATE khach_hang SET ${setSql} WHERE id = ? AND ngay_xoa IS NULL`,
+          ...capNhat.map(([, giaTri]) => giaTri),
+          khachHangId,
+        );
+      }
+
+      if (dto.email !== undefined && taiKhoanId) {
+        await tx.$executeRawUnsafe(
+          `UPDATE tai_khoan
+           SET email = ?,
+               ten_dang_nhap = CASE
+                 WHEN ten_dang_nhap = ? THEN ?
+                 ELSE ten_dang_nhap
+               END
+           WHERE id = ? AND ngay_xoa IS NULL`,
+          dto.email,
+          String(cu.email_tai_khoan ?? ''),
+          dto.email,
+          taiKhoanId,
+        );
+      }
+    });
 
     const moi = await this.chiTiet(id);
     await this.nhatKy.ghiNhan({

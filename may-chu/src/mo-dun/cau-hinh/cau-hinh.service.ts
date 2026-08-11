@@ -90,7 +90,16 @@ export class CauHinhService {
           HttpStatus.FORBIDDEN,
         );
       }
-      this.kiemTraKieuDuLieu(cauHinh.kieu_du_lieu, item.giaTri, item.khoa);
+      this.kiemTraKieuDuLieu(
+        cauHinh.kieu_du_lieu,
+        item.giaTri,
+        item.khoa,
+      );
+
+      this.kiemTraGiaTriNghiepVu(
+        item.khoa,
+        item.giaTri,
+      );
     }
 
     await this.prisma.$transaction(
@@ -110,7 +119,76 @@ export class CauHinhService {
     this.boNhoDem.clear();
   }
 
-  private kiemTraKieuDuLieu(kieu: string, giaTri: string, khoa: string): void {
+  private kiemTraGiaTriNghiepVu(
+    khoa: string,
+    giaTri: string,
+  ): void {
+    const gioiHan: Record<
+      string,
+      { min: number; max: number }
+    > = {
+      THOI_LUONG_DAT_BAN_PHUT: {
+        min: 15,
+        max: 1440,
+      },
+
+      DAT_TRUOC_TOI_THIEU_PHUT: {
+        min: 0,
+        max: 43200,
+      },
+
+      DAT_TRUOC_TOI_DA_NGAY: {
+        min: 1,
+        max: 365,
+      },
+
+      THOI_GIAN_CHO_KHACH_PHUT: {
+        min: 0,
+        max: 1440,
+      },
+
+      THOI_GIAN_HUY_TRUOC_PHUT: {
+        min: 0,
+        max: 10080,
+      },
+
+      SO_NGUOI_TOI_DA_MOI_DAT_BAN: {
+        min: 1,
+        max: 500,
+      },
+
+      KHOANG_CACH_SLOT_PHUT: {
+        min: 5,
+        max: 1440,
+      },
+    };
+
+    const gioiHanKhoa = gioiHan[khoa];
+
+    if (!gioiHanKhoa) {
+      return;
+    }
+
+    const so = Number(giaTri);
+
+    if (
+      !Number.isInteger(so) ||
+      so < gioiHanKhoa.min ||
+      so > gioiHanKhoa.max
+    ) {
+      throw new LoiNghiepVuException(
+        'CAU_HINH_009',
+        `${khoa} phải là số nguyên từ ${gioiHanKhoa.min} đến ${gioiHanKhoa.max}.`,
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+  }
+
+  private kiemTraKieuDuLieu(
+    kieu: string,
+    giaTri: string,
+    khoa: string,
+  ): void {
     if (kieu === 'SO' && !Number.isFinite(Number(giaTri))) {
       throw new LoiNghiepVuException('CAU_HINH_006', `${khoa} phải là số.`);
     }

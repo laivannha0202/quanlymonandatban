@@ -150,6 +150,18 @@ export class NhanVienService {
     const nhanVienId = bigintTuChuoi(id, 'ID nhân viên');
     const taiKhoanId = BigInt(String(cu.tai_khoan_id));
 
+    if (
+      dto.maVaiTro &&
+      String(cu.tai_khoan_id) === nguoiDung.taiKhoanId &&
+      dto.maVaiTro !== String(cu.ma_vai_tro)
+    ) {
+      throw new LoiNghiepVuException(
+        'NHAN_VIEN_005',
+        'Không thể tự thay đổi vai trò của chính tài khoản đang đăng nhập.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
     let vaiTroId: bigint | undefined;
     if (dto.maVaiTro) {
       const [vaiTro] = await this.prisma.$queryRawUnsafe<Array<{ id: bigint; ma_vai_tro: string }>>(

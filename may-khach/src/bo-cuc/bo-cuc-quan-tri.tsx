@@ -2,6 +2,7 @@ import {
   AppstoreOutlined,
   AuditOutlined,
   CalendarOutlined,
+  ClockCircleOutlined,
   DashboardOutlined,
   EnvironmentOutlined,
   GiftOutlined,
@@ -10,6 +11,7 @@ import {
   MessageOutlined,
   PieChartOutlined,
   SafetyCertificateOutlined,
+  SettingOutlined,
   ShopOutlined,
   TagsOutlined,
   TeamOutlined,
@@ -35,6 +37,9 @@ const muc = [
   { key: '/quan-tri/danh-gia', icon: <MessageOutlined />, label: 'Đánh giá' },
   { key: '/quan-tri/bao-cao', icon: <PieChartOutlined />, label: 'Báo cáo' },
   { key: '/quan-tri/vai-tro', icon: <SafetyCertificateOutlined />, label: 'Vai trò & quyền' },
+  { key: '/quan-tri/gio-hoat-dong', icon: <ClockCircleOutlined />, label: 'Giờ hoạt động' },
+  { key: '/quan-tri/ngay-dac-biet', icon: <CalendarOutlined />, label: 'Ngày đặc biệt' },
+  { key: '/quan-tri/cau-hinh', icon: <SettingOutlined />, label: 'Cấu hình' },
   { key: '/quan-tri/nhat-ky', icon: <AuditOutlined />, label: 'Nhật ký' },
 ];
 

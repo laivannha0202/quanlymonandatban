@@ -33,6 +33,9 @@ const QuanTriDanhGia = lazy(() => import('@/trang/quan-tri/danh-gia').then((m) =
 const QuanTriBaoCao = lazy(() => import('@/trang/quan-tri/bao-cao').then((m) => ({ default: m.QuanTriBaoCao })));
 const QuanTriVaiTro = lazy(() => import('@/trang/quan-tri/vai-tro').then((m) => ({ default: m.QuanTriVaiTro })));
 const QuanTriNhatKy = lazy(() => import('@/trang/quan-tri/nhat-ky').then((m) => ({ default: m.QuanTriNhatKy })));
+const QuanTriCauHinh = lazy(() => import('@/trang/quan-tri/cau-hinh').then((m) => ({ default: m.QuanTriCauHinh })));
+const QuanTriGioHoatDong = lazy(() => import('@/trang/quan-tri/gio-hoat-dong').then((m) => ({ default: m.QuanTriGioHoatDong })));
+const QuanTriNgayDacBiet = lazy(() => import('@/trang/quan-tri/ngay-dac-biet').then((m) => ({ default: m.QuanTriNgayDacBiet })));
 const KhongTimThay = lazy(() => import('@/trang/khong-tim-thay').then((m) => ({ default: m.KhongTimThay })));
 
 function DangTaiTrang() {
@@ -74,6 +77,9 @@ export function UngDung() {
         <Route path="danh-gia" element={<QuanTriDanhGia />} />
         <Route path="bao-cao" element={<QuanTriBaoCao />} />
         <Route path="vai-tro" element={<QuanTriVaiTro />} />
+        <Route path="gio-hoat-dong" element={<QuanTriGioHoatDong />} />
+        <Route path="ngay-dac-biet" element={<QuanTriNgayDacBiet />} />
+        <Route path="cau-hinh" element={<QuanTriCauHinh />} />
         <Route path="nhat-ky" element={<QuanTriNhatKy />} />
       </Route>
     </Route>
