@@ -18,7 +18,8 @@
     "check": "npm run build && npm test -- --runInBand",
     "test:smoke": "tsx test/smoke-phan9.ts",
     "test:concurrency": "tsx test/dat-ban-dong-thoi.ts",
-    "security:audit": "npm audit --audit-level=high"
+    "security:audit": "npm audit --audit-level=high",
+    "seed:ci": "tsx prisma/seed-ci.ts && npm run seed"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

@@ -1,0 +1,169 @@
+name: Integration E2E
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-e2e:
+    name: MySQL + API + Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root_password_only
+          MYSQL_DATABASE: quan_ly_nha_hang_ci
+          MYSQL_USER: quanly_ci
+          MYSQL_PASSWORD: ci_app_password_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_root_password_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+
+    env:
+      CI: "true"
+      NODE_ENV: test
+      PORT: "8080"
+      DATABASE_URL: mysql://quanly_ci:ci_app_password_only@127.0.0.1:3306/quan_ly_nha_hang_ci
+      JWT_ACCESS_SECRET: ci_access_secret_only_32_chars_minimum_2026
+      JWT_ACCESS_EXPIRES_SECONDS: "900"
+      JWT_REFRESH_SECRET: ci_refresh_secret_only_32_chars_minimum_2026
+      JWT_REFRESH_EXPIRES_SECONDS: "2592000"
+      RESET_PASSWORD_EXPIRES_MINUTES: "30"
+      FRONTEND_URL: http://localhost:4173
+      SEED_CI_CONFIRM: "YES"
+      SEED_ADMIN_EMAIL: admin-ci@example.local
+      SEED_ADMIN_PASSWORD: CI_Admin_2026_Strong_Only_Test
+      SEED_ADMIN_HO_TEN: Quan tri vien CI
+      BASE_URL: http://localhost:8080/api/v1
+      E2E_API_URL: http://localhost:8080/api/v1
+      E2E_BASE_URL: http://localhost:4173
+      E2E_ADMIN_EMAIL: admin-ci@example.local
+      E2E_ADMIN_PASSWORD: CI_Admin_2026_Strong_Only_Test
+      VITE_API_BASE_URL: http://localhost:8080/api/v1
+      VITE_TEN_NHA_HANG: Nha hang CI
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            may-chu/package-lock.json
+            may-khach/package-lock.json
+
+      - name: Verify bootstrap contains schema only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s may-chu/prisma/bootstrap-ci.sql
+          if grep -Eiq '^[[:space:]]*(INSERT|REPLACE)[[:space:]]+INTO' may-chu/prisma/bootstrap-ci.sql; then
+            echo "bootstrap-ci.sql contains data statements"
+            exit 1
+          fi
+
+      - name: Install backend dependencies
+        working-directory: may-chu
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: may-chu
+        run: npm run prisma:generate
+
+      - name: Import CI schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host -i mysql:8.4 \
+            mysql \
+            -h127.0.0.1 \
+            -P3306 \
+            -uquanly_ci \
+            -pci_app_password_only \
+            quan_ly_nha_hang_ci \
+            < may-chu/prisma/bootstrap-ci.sql
+
+      - name: Seed CI reference data and Admin
+        working-directory: may-chu
+        run: npm run seed:ci
+
+      - name: Build backend
+        working-directory: may-chu
+        run: npm run build
+
+      - name: Start backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd may-chu
+          nohup npm run start:prod > ../backend-ci.log 2>&1 &
+          echo $! > ../backend-ci.pid
+
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/api/v1/suc-khoe/song >/dev/null; then
+              echo "BACKEND_CI_READY"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat ../backend-ci.log
+          exit 1
+
+      - name: Backend smoke
+        working-directory: may-chu
+        run: npm run test:smoke
+
+      - name: Booking concurrency
+        working-directory: may-chu
+        run: npm run test:concurrency
+
+      - name: Install frontend dependencies
+        working-directory: may-khach
+        run: npm ci
+
+      - name: Build frontend against CI API
+        working-directory: may-khach
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        working-directory: may-khach
+        run: npx playwright install --with-deps chromium
+
+      - name: Full Playwright E2E
+        working-directory: may-khach
+        run: npm run test:e2e
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-e2e-diagnostics
+          if-no-files-found: ignore
+          path: |
+            backend-ci.log
+            may-khach/playwright-report/
+            may-khach/test-results/
+          retention-days: 7
