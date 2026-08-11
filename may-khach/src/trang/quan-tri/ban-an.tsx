@@ -9,6 +9,7 @@ import {
   type LienKetBanQuanTri,
 } from '@/dich-vu/quan-tri.api';
 import { LoiApi } from '@/dich-vu/http';
+import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { CanhBaoLoi } from '@/thanh-phan/canh-bao-loi';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
 import { TrangThai } from '@/thanh-phan/trang-thai';
@@ -18,6 +19,8 @@ type FormLienKet = { ban1Id: string; ban2Id: string; coTheGhep: boolean; ghiChu?
 
 export function QuanTriBanAn() {
   const { message, modal } = App.useApp();
+  const { coQuyen } = useXacThuc();
+  const coQuanLy = coQuyen('BAN_AN_QUAN_LY');
   const qc = useQueryClient();
   const [formBan] = Form.useForm<FormBan>();
   const [formLienKet] = Form.useForm<FormLienKet>();
@@ -119,12 +122,12 @@ export function QuanTriBanAn() {
         { title: 'Tối đa', dataIndex: 'sucChuaToiDa', width: 90 },
         { title: 'Trạng thái', dataIndex: 'trangThai', render: (v: string) => <TrangThai value={v} /> },
         { title: 'Ghi chú', dataIndex: 'ghiChu', ellipsis: true },
-        { title: 'Thao tác', fixed: 'right', width: 150, render: (_: unknown, r: BanAnQuanTri) => <Space>
+        { title: 'Thao tác', fixed: 'right', width: 150, render: (_: unknown, r: BanAnQuanTri) => coQuanLy ? <Space>
           <Button size="small" aria-label="Sửa bàn" icon={<EditOutlined />} onClick={() => moSuaBan(r)} />
           <Button size="small" aria-label="Xóa bàn" danger icon={<DeleteOutlined />} onClick={() => modal.confirm({
             title: 'Xóa bàn?', content: `${r.maBan} · ${r.tenBan}`, okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: () => xoaBan.mutateAsync(r.id),
           })} />
-        </Space> },
+        </Space> : '—' },
       ]}
     /></Card>
   </>;
@@ -140,9 +143,9 @@ export function QuanTriBanAn() {
       columns={[
         { title: 'Bàn 1', dataIndex: 'ban1Id', render: (id: string) => tenBan.get(id) || id },
         { title: 'Bàn 2', dataIndex: 'ban2Id', render: (id: string) => tenBan.get(id) || id },
-        { title: 'Có thể ghép', dataIndex: 'coTheGhep', render: (v: boolean, r: LienKetBanQuanTri) => <Switch checked={Boolean(v)} onChange={(checked) => capNhatLienKet.mutate({ id: r.id, coTheGhep: checked })} /> },
+        { title: 'Có thể ghép', dataIndex: 'coTheGhep', render: (v: boolean, r: LienKetBanQuanTri) => <Switch disabled={!coQuanLy} checked={Boolean(v)} onChange={(checked) => capNhatLienKet.mutate({ id: r.id, coTheGhep: checked })} /> },
         { title: 'Ghi chú', dataIndex: 'ghiChu', ellipsis: true },
-        { title: '', width: 80, render: (_: unknown, r: LienKetBanQuanTri) => <Button danger size="small" icon={<DeleteOutlined />} onClick={() => modal.confirm({ title: 'Xóa liên kết bàn?', okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: () => xoaLienKet.mutateAsync(r.id) })} /> },
+        { title: '', width: 80, render: (_: unknown, r: LienKetBanQuanTri) => coQuanLy ? <Button danger size="small" icon={<DeleteOutlined />} onClick={() => modal.confirm({ title: 'Xóa liên kết bàn?', okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: () => xoaLienKet.mutateAsync(r.id) })} /> : null },
       ]}
     /></Card>
   </>;
@@ -151,7 +154,7 @@ export function QuanTriBanAn() {
     <TieuDeTrang
       tieuDe="Bàn ăn"
       moTa="Quản lý bàn, sức chứa và các cặp bàn được phép ghép khi tìm bàn trống."
-      hanhDong={<Space wrap><Button icon={<LinkOutlined />} onClick={() => { formLienKet.resetFields(); formLienKet.setFieldsValue({ coTheGhep: true } as Partial<FormLienKet>); setMoFormLienKet(true); }}>Liên kết bàn</Button><Button type="primary" icon={<PlusOutlined />} onClick={moTaoBan}>Thêm bàn</Button></Space>}
+      hanhDong={coQuanLy ? <Space wrap><Button icon={<LinkOutlined />} onClick={() => { formLienKet.resetFields(); formLienKet.setFieldsValue({ coTheGhep: true } as Partial<FormLienKet>); setMoFormLienKet(true); }}>Liên kết bàn</Button><Button type="primary" icon={<PlusOutlined />} onClick={moTaoBan}>Thêm bàn</Button></Space> : undefined}
     />
     <Tabs items={[
       { key: 'ban', label: <span>Bàn ăn <Tag>{banQuery.data?.danhSach.length ?? 0}</Tag></span>, children: tabBan },

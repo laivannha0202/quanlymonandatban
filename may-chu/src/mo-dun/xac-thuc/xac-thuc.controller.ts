@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { ChoPhepKhiBatBuocDoiMatKhau } from '../../dung-chung/decorator/cho-phep-khi-bat-buoc-doi-mat-khau.decorator';
 import { NguoiDungHienTai } from '../../dung-chung/decorator/nguoi-dung-hien-tai.decorator';
 import { JwtGuard } from '../../dung-chung/guard/jwt.guard';
 import type { NguoiDungXacThuc } from '../../dung-chung/types/nguoi-dung-xac-thuc.type';
@@ -53,6 +54,7 @@ export class XacThucController {
   }
 
   @Post('doi-mat-khau')
+  @ChoPhepKhiBatBuocDoiMatKhau()
   @UseGuards(JwtGuard)
   @ApiBearerAuth()
   @Throttle({ default: { limit: 5, ttl: 600_000 } })
@@ -65,6 +67,7 @@ export class XacThucController {
   }
 
   @Post('dang-xuat')
+  @ChoPhepKhiBatBuocDoiMatKhau()
   @UseGuards(JwtGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Đăng xuất và vô hiệu refresh token' })
@@ -73,6 +76,7 @@ export class XacThucController {
   }
 
   @Get('thong-tin-hien-tai')
+  @ChoPhepKhiBatBuocDoiMatKhau()
   @UseGuards(JwtGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại' })

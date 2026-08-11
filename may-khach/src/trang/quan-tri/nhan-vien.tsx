@@ -31,7 +31,8 @@ type FormNhanVien = {
 
 export function QuanTriNhanVien() {
   const { message } = App.useApp();
-  const { nguoiDung } = useXacThuc();
+  const { nguoiDung, coQuyen } = useXacThuc();
+  const coQuanLy = coQuyen('NHAN_VIEN_QUAN_LY');
   const [form] = Form.useForm<FormNhanVien>();
   const [dangSua, setDangSua] = useState<NhanVienQuanTri | null>(null);
   const [moForm, setMoForm] = useState(false);
@@ -52,6 +53,7 @@ export function QuanTriNhanVien() {
   const vaiTroQuery = useQuery({
     queryKey: ['quan-tri', 'vai-tro', 'cho-nhan-vien'],
     queryFn: heThongApi.vaiTro,
+    enabled: coQuanLy,
   });
 
   const vaiTroOptions = (vaiTroQuery.data ?? [])
@@ -156,14 +158,14 @@ export function QuanTriNhanVien() {
       moTa="Tạo tài khoản nhân sự, cập nhật hồ sơ, vai trò, mật khẩu và trạng thái làm việc."
       hanhDong={<Space>
         <Button icon={<ReloadOutlined />} onClick={() => query.refetch()}>Làm mới</Button>
-        <Button
+        {coQuanLy ? <Button
           aria-label="Thêm nhân viên"
           type="primary"
           icon={<PlusOutlined />}
           onClick={moTao}
         >
           Thêm nhân viên
-        </Button>
+        </Button> : null}
       </Space>}
     />
 
@@ -175,14 +177,14 @@ export function QuanTriNhanVien() {
           onSearch={setTuKhoa}
           style={{ width: 290 }}
         />
-        <Select
+        {coQuanLy ? <Select
           allowClear
           placeholder="Vai trò"
           style={{ width: 190 }}
           value={maVaiTro}
           onChange={setMaVaiTro}
           options={vaiTroOptions}
-        />
+        /> : null}
         <Select
           allowClear
           placeholder="Trạng thái"
@@ -229,6 +231,8 @@ export function QuanTriNhanVien() {
             width: 250,
             render: (_: unknown, row: NhanVienQuanTri) => {
               const laBanThan = row.taiKhoanId === nguoiDung?.id;
+              if (!coQuanLy) return '—';
+
               return <Space>
                 <Button
                   aria-label="Sửa"

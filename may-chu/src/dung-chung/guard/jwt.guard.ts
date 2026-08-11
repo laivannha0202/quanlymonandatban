@@ -5,8 +5,12 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import type { RequestCoNguoiDung } from '../types/request-co-nguoi-dung.type';
+import {
+  KHOA_CHO_PHEP_KHI_BAT_BUOC_DOI_MAT_KHAU,
+} from '../decorator/cho-phep-khi-bat-buoc-doi-mat-khau.decorator';
 import { LoiNghiepVuException } from '../exception/loi-nghiep-vu.exception';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 
@@ -21,6 +25,7 @@ export class JwtGuard implements CanActivate {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -55,6 +60,23 @@ export class JwtGuard implements CanActivate {
           'XAC_THUC_003',
           'Tài khoản không còn hoạt động.',
           HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const choPhepKhiBatBuocDoiMatKhau =
+        this.reflector.getAllAndOverride<boolean>(
+          KHOA_CHO_PHEP_KHI_BAT_BUOC_DOI_MAT_KHAU,
+          [context.getHandler(), context.getClass()],
+        ) ?? false;
+
+      if (
+        taiKhoan.bat_buoc_doi_mat_khau &&
+        !choPhepKhiBatBuocDoiMatKhau
+      ) {
+        throw new LoiNghiepVuException(
+          'XAC_THUC_014',
+          'Bạn phải đổi mật khẩu trước khi tiếp tục sử dụng hệ thống.',
+          HttpStatus.FORBIDDEN,
         );
       }
 

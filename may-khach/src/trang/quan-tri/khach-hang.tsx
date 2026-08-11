@@ -4,12 +4,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { quanTriApi, type KhachHangPayload, type KhachHangQuanTri } from '@/dich-vu/quan-tri.api';
 import { LoiApi } from '@/dich-vu/http';
+import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { CanhBaoLoi } from '@/thanh-phan/canh-bao-loi';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
 import { TrangThai } from '@/thanh-phan/trang-thai';
 
 export function QuanTriKhachHang() {
   const { message } = App.useApp();
+  const { coQuyen } = useXacThuc();
+  const coSua = coQuyen('KHACH_HANG_SUA');
+  const coKhoa = coQuyen('KHACH_HANG_KHOA');
   const [form] = Form.useForm<KhachHangPayload>();
   const [dangSua, setDangSua] = useState<KhachHangQuanTri | null>(null);
   const [tuKhoa, setTuKhoa] = useState('');
@@ -109,9 +113,9 @@ export function QuanTriKhachHang() {
             title: 'Thao tác',
             fixed: 'right',
             width: 250,
-            render: (_: unknown, row: KhachHangQuanTri) => <Space>
-              <Button size="small" icon={<EditOutlined />} onClick={() => moSua(row)}>Sửa</Button>
-              <Select
+            render: (_: unknown, row: KhachHangQuanTri) => (coSua || coKhoa) ? <Space>
+              {coSua ? <Button aria-label={`Sửa khách hàng ${row.hoTen}`} size="small" icon={<EditOutlined />} onClick={() => moSua(row)}>Sửa</Button> : null}
+              {coKhoa ? <Select
                 size="small"
                 aria-label={`Trạng thái ${row.hoTen}`}
                 value={row.trangThai}
@@ -125,8 +129,8 @@ export function QuanTriKhachHang() {
                   { value: 'BI_KHOA', label: 'Khóa' },
                   { value: 'NGUNG_HOAT_DONG', label: 'Ngừng' },
                 ]}
-              />
-            </Space>,
+              /> : null}
+            </Space> : '—',
           },
         ]}
       />

@@ -2,9 +2,12 @@ import { Alert, App, Button, Card, Input, Modal, Rate, Select, Space, Switch, Ta
 import { useEffect, useState } from 'react';
 import { heThongApi, type DanhGia } from '@/dich-vu/he-thong.api';
 import { LoiApi } from '@/dich-vu/http';
+import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 
 export function QuanTriDanhGia() {
   const { message } = App.useApp();
+  const { coQuyen } = useXacThuc();
+  const coQuanLy = coQuyen('DANH_GIA_QUAN_LY');
   const [ds, setDs] = useState<DanhGia[]>([]);
   const [tai, setTai] = useState(true);
   const [loi, setLoi] = useState('');
@@ -23,8 +26,8 @@ export function QuanTriDanhGia() {
       { title: 'Khách', dataIndex: 'hoTen' }, { title: 'Sao', dataIndex: 'soSao', render: (v: number) => <Rate disabled value={v} /> },
       { title: 'Nội dung', dataIndex: 'noiDung', width: 280 }, { title: 'Phản hồi', dataIndex: 'phanHoi', width: 280 },
       { title: 'Ngày', dataIndex: 'ngayTao', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
-      { title: 'Hiển thị', dataIndex: 'hienThi', render: (v: boolean, r: DanhGia) => <Switch checked={Boolean(v)} onChange={async (checked) => { try { await heThongApi.hienThiDanhGia(r.id, checked); message.success('Đã cập nhật hiển thị'); await taiLai(); } catch (e) { message.error(e instanceof LoiApi ? e.message : 'Không cập nhật được.'); } }} /> },
-      { title: '', fixed: 'right', render: (_: unknown, r: DanhGia) => <Button size="small" onClick={() => { setDangPhanHoi(r); setPhanHoi(r.phanHoi || ''); }}>Phản hồi</Button> },
+      { title: 'Hiển thị', dataIndex: 'hienThi', render: (v: boolean, r: DanhGia) => <Switch disabled={!coQuanLy} checked={Boolean(v)} onChange={async (checked) => { try { await heThongApi.hienThiDanhGia(r.id, checked); message.success('Đã cập nhật hiển thị'); await taiLai(); } catch (e) { message.error(e instanceof LoiApi ? e.message : 'Không cập nhật được.'); } }} /> },
+      { title: '', fixed: 'right', render: (_: unknown, r: DanhGia) => coQuanLy ? <Button size="small" onClick={() => { setDangPhanHoi(r); setPhanHoi(r.phanHoi || ''); }}>Phản hồi</Button> : null },
     ]} /></Card>
     <Modal open={Boolean(dangPhanHoi)} title={`Phản hồi ${dangPhanHoi?.hoTen || ''}`} okText="Lưu phản hồi" cancelText="Đóng" onCancel={() => setDangPhanHoi(null)} onOk={async () => {
       if (!dangPhanHoi || !phanHoi.trim()) return;

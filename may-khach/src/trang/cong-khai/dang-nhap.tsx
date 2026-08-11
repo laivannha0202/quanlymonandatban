@@ -22,7 +22,21 @@ export function DangNhap() {
         const u = await dangNhap(v.taiKhoan, v.matKhau);
         message.success('Đăng nhập thành công');
         const tu = (location.state as { tu?: string } | null)?.tu;
-        navigate(tu || (u.vaiTro.maVaiTro === 'KHACH_HANG' ? '/tai-khoan/dat-ban' : '/quan-tri'), { replace: true });
+
+        if (u.batBuocDoiMatKhau) {
+          navigate('/tai-khoan/doi-mat-khau', { replace: true });
+          return;
+        }
+
+        navigate(
+          tu ||
+            (
+              u.vaiTro.maVaiTro === 'KHACH_HANG'
+                ? '/tai-khoan/dat-ban'
+                : '/quan-tri'
+            ),
+          { replace: true },
+        );
       } catch (e) { setLoi(e instanceof LoiApi ? e.message : 'Đăng nhập thất bại.'); }
       finally { setTai(false); }
     }}>

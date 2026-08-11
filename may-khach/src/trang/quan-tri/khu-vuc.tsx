@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { quanTriApi, type KhuVucPayload, type KhuVucQuanTri } from '@/dich-vu/quan-tri.api';
 import { LoiApi } from '@/dich-vu/http';
+import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { CanhBaoLoi } from '@/thanh-phan/canh-bao-loi';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
 import { TrangThai } from '@/thanh-phan/trang-thai';
@@ -12,6 +13,8 @@ type FormData = KhuVucPayload;
 
 export function QuanTriKhuVuc() {
   const { message, modal } = App.useApp();
+  const { coQuyen } = useXacThuc();
+  const coQuanLy = coQuyen('KHU_VUC_QUAN_LY');
   const queryClient = useQueryClient();
   const [form] = Form.useForm<FormData>();
   const [dangSua, setDangSua] = useState<KhuVucQuanTri | null>(null);
@@ -67,7 +70,9 @@ export function QuanTriKhuVuc() {
     <TieuDeTrang
       tieuDe="Khu vực"
       moTa="Quản lý các khu vực phục vụ trước khi sắp bàn vào từng khu."
-      hanhDong={<Button type="primary" icon={<PlusOutlined />} onClick={moTao}>Thêm khu vực</Button>}
+      hanhDong={coQuanLy
+        ? <Button type="primary" icon={<PlusOutlined />} onClick={moTao}>Thêm khu vực</Button>
+        : undefined}
     />
     <Card className="filter-card mb-16">
       <Space wrap>
@@ -93,7 +98,7 @@ export function QuanTriKhuVuc() {
           { title: 'Mô tả', dataIndex: 'moTa', ellipsis: true },
           { title: 'Thứ tự', dataIndex: 'thuTu', width: 90 },
           { title: 'Trạng thái', dataIndex: 'trangThai', render: (v: string) => <TrangThai value={v} /> },
-          { title: 'Thao tác', fixed: 'right', width: 150, render: (_: unknown, r: KhuVucQuanTri) => <Space>
+          { title: 'Thao tác', fixed: 'right', width: 150, render: (_: unknown, r: KhuVucQuanTri) => coQuanLy ? <Space>
             <Button aria-label="Sửa khu vực" size="small" icon={<EditOutlined />} onClick={() => moSua(r)} />
             <Button aria-label="Xóa khu vực" size="small" danger icon={<DeleteOutlined />} onClick={() => modal.confirm({
               title: 'Xóa khu vực?',
@@ -101,7 +106,7 @@ export function QuanTriKhuVuc() {
               okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true },
               onOk: () => xoaMutation.mutateAsync(r.id),
             })} />
-          </Space> },
+          </Space> : '—' },
         ]}
       />
     </Card>

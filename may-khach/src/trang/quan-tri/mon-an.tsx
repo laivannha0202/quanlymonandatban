@@ -33,6 +33,7 @@ import { LoiApi } from '@/dich-vu/http';
 import { quanTriApi, type HinhAnhMonPayload, type MonAnPayload } from '@/dich-vu/quan-tri.api';
 import type { HinhAnhMon, MonAn } from '@/kieu/nghiep-vu';
 import { dinhDangTien } from '@/cau-hinh/dinh-dang';
+import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { CanhBaoLoi } from '@/thanh-phan/canh-bao-loi';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
 import { TrangThai } from '@/thanh-phan/trang-thai';
@@ -42,6 +43,8 @@ type FormHinh = HinhAnhMonPayload;
 
 export function QuanTriMonAn() {
   const { message, modal } = App.useApp();
+  const { coQuyen } = useXacThuc();
+  const coQuanLy = coQuyen('MON_AN_QUAN_LY');
   const qc = useQueryClient();
   const [form] = Form.useForm<FormMon>();
   const [formHinh] = Form.useForm<FormHinh>();
@@ -142,7 +145,7 @@ export function QuanTriMonAn() {
     <TieuDeTrang
       tieuDe="Món ăn"
       moTa="Quản lý thông tin, giá, trạng thái bán và bộ hình ảnh của từng món."
-      hanhDong={<Button type="primary" icon={<PlusOutlined />} onClick={moTao}>Thêm món ăn</Button>}
+      hanhDong={coQuanLy ? <Button type="primary" icon={<PlusOutlined />} onClick={moTao}>Thêm món ăn</Button> : undefined}
     />
     <Card className="filter-card mb-16">
       <Space wrap>
@@ -173,11 +176,11 @@ export function QuanTriMonAn() {
         { title: 'Còn món', dataIndex: 'conMon', width: 100, render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? 'Còn món' : 'Hết món'}</Tag> },
         { title: 'Trạng thái', dataIndex: 'trangThai', width: 130, render: (v: string) => <TrangThai value={v} /> },
         { title: 'Thao tác', fixed: 'right', width: 170, render: (_: unknown, r: MonAn) => <Space>
-          <Button size="small" aria-label="Quản lý ảnh" icon={<EyeOutlined />} onClick={() => moAnh(r)} />
-          <Button size="small" aria-label="Sửa món" icon={<EditOutlined />} onClick={() => moSua(r)} />
-          <Button size="small" aria-label="Xóa món" danger icon={<DeleteOutlined />} onClick={() => modal.confirm({
+          <Button size="small" aria-label="Xem hình ảnh" icon={<EyeOutlined />} onClick={() => moAnh(r)} />
+          {coQuanLy ? <Button size="small" aria-label="Sửa món" icon={<EditOutlined />} onClick={() => moSua(r)} /> : null}
+          {coQuanLy ? <Button size="small" aria-label="Xóa món" danger icon={<DeleteOutlined />} onClick={() => modal.confirm({
             title: 'Xóa món ăn?', content: r.tenMon, okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: () => xoaMutation.mutateAsync(r.id),
-          })} />
+          })} /> : null}
         </Space> },
       ]}
     /></Card>
@@ -204,16 +207,16 @@ export function QuanTriMonAn() {
       </Form>
     </Modal>
 
-    <Drawer width={620} open={Boolean(monAnhId)} onClose={() => setMonAnhId(null)} title={`Hình ảnh · ${chiTietQuery.data?.tenMon ?? ''}`} extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => { formHinh.resetFields(); formHinh.setFieldsValue({ thuTu: 0, laAnhChinh: false }); setMoThemHinh(true); }}>Thêm ảnh</Button>}>
+    <Drawer width={620} open={Boolean(monAnhId)} onClose={() => setMonAnhId(null)} title={`Hình ảnh · ${chiTietQuery.data?.tenMon ?? ''}`} extra={coQuanLy ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { formHinh.resetFields(); formHinh.setFieldsValue({ thuTu: 0, laAnhChinh: false }); setMoThemHinh(true); }}>Thêm ảnh</Button> : null}>
       <CanhBaoLoi loi={chiTietQuery.error} macDinh="Không tải được hình ảnh món." />
       <List
         loading={chiTietQuery.isPending || chiTietQuery.isFetching}
         dataSource={chiTietQuery.data?.hinhAnh ?? []}
         locale={{ emptyText: 'Món này chưa có hình ảnh phụ.' }}
-        renderItem={(h: HinhAnhMon) => <List.Item actions={[
+        renderItem={(h: HinhAnhMon) => <List.Item actions={coQuanLy ? [
           h.laAnhChinh ? <Tag color="gold" key="main"><StarFilled /> Ảnh chính</Tag> : <Button key="main" size="small" onClick={() => monAnhId && chinhHinhMutation.mutate({ monId: monAnhId, hinhId: h.id })}>Đặt ảnh chính</Button>,
           <Button key="delete" danger size="small" icon={<DeleteOutlined />} onClick={() => monAnhId && modal.confirm({ title: 'Xóa hình ảnh?', okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: () => xoaHinhMutation.mutateAsync({ monId: monAnhId, hinhId: h.id }) })} />,
-        ]}>
+        ] : (h.laAnhChinh ? [<Tag color="gold" key="main"><StarFilled /> Ảnh chính</Tag>] : [])}>
           <List.Item.Meta
             avatar={<Image width={84} height={64} className="admin-dish-image" src={h.duongDanAnh} fallback="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" />}
             title={h.altText || 'Hình món ăn'}

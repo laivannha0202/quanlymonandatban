@@ -11,6 +11,8 @@ interface XacThucContextValue {
   dangXuat: () => Promise<void>;
   taiLaiNguoiDung: () => Promise<void>;
   laKhuVucQuanTri: boolean;
+  coQuyen: (maQuyen: string) => boolean;
+  coTatCaQuyen: (maQuyens: string[]) => boolean;
 }
 
 const XacThucContext = createContext<XacThucContextValue | null>(null);
@@ -27,7 +29,11 @@ export function XacThucProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let conHieuLuc = true;
     (async () => {
-      if (!layPhien()) { setDangKhoiTao(false); return; }
+      if (!layPhien()) {
+        setDangKhoiTao(false);
+        return;
+      }
+
       try {
         const hienTai = await xacThucApi.hienTai();
         if (conHieuLuc) setNguoiDung(hienTai);
@@ -38,11 +44,15 @@ export function XacThucProvider({ children }: { children: ReactNode }) {
         if (conHieuLuc) setDangKhoiTao(false);
       }
     })();
-    return () => { conHieuLuc = false; };
+
+    return () => {
+      conHieuLuc = false;
+    };
   }, []);
 
   async function hoanTatDangNhap(token: BoToken) {
     luuPhien(token);
+
     try {
       const hienTai = await xacThucApi.hienTai();
       setNguoiDung(hienTai);
@@ -53,25 +63,68 @@ export function XacThucProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const value = useMemo<XacThucContextValue>(() => ({
-    nguoiDung,
-    dangKhoiTao,
-    dangNhap: async (taiKhoan, matKhau) => hoanTatDangNhap(await xacThucApi.dangNhap({ taiKhoan, matKhau })),
-    dangKy: async (payload) => hoanTatDangNhap(await xacThucApi.dangKy(payload)),
-    dangXuat: async () => {
-      try { await xacThucApi.dangXuat(); } catch { /* xóa phiên phía client dù backend không phản hồi */ }
-      xoaPhien();
-      setNguoiDung(null);
-    },
-    taiLaiNguoiDung,
-    laKhuVucQuanTri: Boolean(nguoiDung && nguoiDung.vaiTro.maVaiTro !== 'KHACH_HANG'),
-  }), [nguoiDung, dangKhoiTao]);
+  const value = useMemo<XacThucContextValue>(() => {
+    const tapQuyen = new Set(nguoiDung?.quyen ?? []);
 
-  return <XacThucContext.Provider value={value}>{children}</XacThucContext.Provider>;
+    return {
+      nguoiDung,
+      dangKhoiTao,
+
+      dangNhap: async (taiKhoan, matKhau) =>
+        hoanTatDangNhap(
+          await xacThucApi.dangNhap({
+            taiKhoan,
+            matKhau,
+          }),
+        ),
+
+      dangKy: async (payload) =>
+        hoanTatDangNhap(
+          await xacThucApi.dangKy(payload),
+        ),
+
+      dangXuat: async () => {
+        try {
+          await xacThucApi.dangXuat();
+        } catch {
+          // Luôn xóa phiên phía client kể cả Backend không phản hồi.
+        }
+
+        xoaPhien();
+        setNguoiDung(null);
+      },
+
+      taiLaiNguoiDung,
+
+      laKhuVucQuanTri: Boolean(
+        nguoiDung &&
+        nguoiDung.vaiTro.maVaiTro !== 'KHACH_HANG' &&
+        (nguoiDung.quyen?.length ?? 0) > 0,
+      ),
+
+      coQuyen: (maQuyen) =>
+        tapQuyen.has(maQuyen),
+
+      coTatCaQuyen: (maQuyens) =>
+        maQuyens.every((maQuyen) => tapQuyen.has(maQuyen)),
+    };
+  }, [nguoiDung, dangKhoiTao]);
+
+  return (
+    <XacThucContext.Provider value={value}>
+      {children}
+    </XacThucContext.Provider>
+  );
 }
 
 export function useXacThuc() {
   const ctx = useContext(XacThucContext);
-  if (!ctx) throw new Error('useXacThuc phải nằm trong XacThucProvider');
+
+  if (!ctx) {
+    throw new Error(
+      'useXacThuc phải nằm trong XacThucProvider',
+    );
+  }
+
   return ctx;
 }

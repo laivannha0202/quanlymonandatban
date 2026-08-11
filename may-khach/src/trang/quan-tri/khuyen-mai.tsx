@@ -2,6 +2,7 @@ import { Alert, App, Button, Card, Form, Input, InputNumber, Modal, Select, Spac
 import { useEffect, useState } from 'react';
 import { heThongApi, type KhuyenMai } from '@/dich-vu/he-thong.api';
 import { LoiApi } from '@/dich-vu/http';
+import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { TrangThai } from '@/thanh-phan/trang-thai';
 
 const tien = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
@@ -28,6 +29,8 @@ type FormData = {
 
 export function QuanTriKhuyenMai() {
   const { message, modal } = App.useApp();
+  const { coQuyen } = useXacThuc();
+  const coQuanLy = coQuyen('KHUYEN_MAI_QUAN_LY');
   const [form] = Form.useForm<FormData>();
   const [ds, setDs] = useState<KhuyenMai[]>([]);
   const [tai, setTai] = useState(true);
@@ -58,7 +61,7 @@ export function QuanTriKhuyenMai() {
   };
 
   return <>
-    <Space className="page-title-row" wrap><Typography.Title level={2}>Khuyến mãi</Typography.Title><Button type="primary" onClick={moTao}>Thêm khuyến mãi</Button></Space>
+    <Space className="page-title-row" wrap><Typography.Title level={2}>Khuyến mãi</Typography.Title>{coQuanLy ? <Button type="primary" onClick={moTao}>Thêm khuyến mãi</Button> : null}</Space>
     {loi && <Alert type="error" showIcon message={loi} className="mb-16" />}
     <Card><Table rowKey="id" loading={tai} dataSource={ds} scroll={{ x: 1150 }} columns={[
       { title: 'Mã', dataIndex: 'maKhuyenMai' }, { title: 'Tên', dataIndex: 'tenKhuyenMai' },
@@ -66,7 +69,7 @@ export function QuanTriKhuyenMai() {
       { title: 'Bắt đầu', dataIndex: 'ngayBatDau', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
       { title: 'Kết thúc', dataIndex: 'ngayKetThuc', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
       { title: 'Đã dùng', dataIndex: 'soLuotDaDung' }, { title: 'Trạng thái', dataIndex: 'trangThai', render: (v: string) => <TrangThai value={v} /> },
-      { title: 'Thao tác', fixed: 'right', render: (_: unknown, r: KhuyenMai) => <Space><Button size="small" onClick={() => moSua(r)}>Sửa</Button><Button size="small" danger onClick={() => modal.confirm({ title: 'Xóa khuyến mãi?', content: r.tenKhuyenMai, okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: async () => { try { await heThongApi.xoaKhuyenMai(r.id); message.success('Đã xóa'); await taiLai(); } catch (e) { message.error(e instanceof LoiApi ? e.message : 'Không xóa được.'); } } })}>Xóa</Button></Space> },
+      { title: 'Thao tác', fixed: 'right', render: (_: unknown, r: KhuyenMai) => coQuanLy ? <Space><Button size="small" onClick={() => moSua(r)}>Sửa</Button><Button size="small" danger onClick={() => modal.confirm({ title: 'Xóa khuyến mãi?', content: r.tenKhuyenMai, okText: 'Xóa', cancelText: 'Đóng', okButtonProps: { danger: true }, onOk: async () => { try { await heThongApi.xoaKhuyenMai(r.id); message.success('Đã xóa'); await taiLai(); } catch (e) { message.error(e instanceof LoiApi ? e.message : 'Không xóa được.'); } } })}>Xóa</Button></Space> : '—' },
     ]} /></Card>
 
     <Modal open={moForm} width={720} title={dangSua ? 'Sửa khuyến mãi' : 'Thêm khuyến mãi'} okText="Lưu" cancelText="Đóng" onCancel={() => setMoForm(false)} onOk={() => form.submit()} destroyOnHidden>

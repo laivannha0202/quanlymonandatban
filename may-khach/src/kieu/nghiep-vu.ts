@@ -13,6 +13,7 @@ export interface NguoiDungHienTai {
   batBuocDoiMatKhau: boolean;
   lanDangNhapCuoi: string | null;
   vaiTro: { id: string; maVaiTro: string };
+  quyen: string[];
 }
 
 export interface DanhMucMon {

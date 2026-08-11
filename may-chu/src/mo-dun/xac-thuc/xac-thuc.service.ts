@@ -305,9 +305,31 @@ export class XacThucService {
       },
     });
 
+    const vaiTroId = BigInt(nguoiDung.vaiTroId);
+    const lienKet = await this.prisma.vai_tro_quyen.findMany({
+      where: { vai_tro_id: vaiTroId },
+      select: { quyen_id: true },
+    });
+
+    const danhSachQuyen = lienKet.length
+      ? await this.prisma.quyen.findMany({
+          where: {
+            id: {
+              in: lienKet.map((item) => item.quyen_id),
+            },
+          },
+          select: { ma_quyen: true },
+          orderBy: { ma_quyen: 'asc' },
+        })
+      : [];
+
     return {
       ...taiKhoan,
-      vaiTro: { id: nguoiDung.vaiTroId, maVaiTro: nguoiDung.maVaiTro },
+      vaiTro: {
+        id: nguoiDung.vaiTroId,
+        maVaiTro: nguoiDung.maVaiTro,
+      },
+      quyen: danhSachQuyen.map((item) => item.ma_quyen),
     };
   }
 

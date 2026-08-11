@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { quanTriApi } from '@/dich-vu/quan-tri.api';
 import { LoiApi } from '@/dich-vu/http';
 import type { DatBan } from '@/kieu/nghiep-vu';
+import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { dinhDangNgay, dinhDangNgayGio } from '@/cau-hinh/ngay-gio';
 import { CanhBaoLoi } from '@/thanh-phan/canh-bao-loi';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
@@ -14,6 +15,7 @@ type HanhDong = 'xac-nhan' | 'check-in' | 'hoan-thanh' | 'khong-den' | 'huy';
 
 export function QuanTriDatBan() {
   const { message, modal } = App.useApp();
+  const { coQuyen } = useXacThuc();
   const qc = useQueryClient();
   const [trangThai, setTrangThai] = useState<string>();
   const [tuKhoa, setTuKhoa] = useState('');
@@ -77,11 +79,11 @@ export function QuanTriDatBan() {
         { title: 'Người', dataIndex: 'soNguoi', width: 80 },
         { title: 'Trạng thái', dataIndex: 'trangThai', width: 135, render: (v: string) => <TrangThai value={v} /> },
         { title: 'Thao tác', fixed: 'right', width: 280, render: (_: unknown, r: DatBan) => <Space wrap>
-          {r.trangThai === 'CHO_XAC_NHAN' && <Button size="small" type="primary" onClick={() => hanhDong(r, 'xac-nhan')}>Xác nhận</Button>}
-          {r.trangThai === 'DA_XAC_NHAN' && <Button size="small" onClick={() => hanhDong(r, 'check-in')}>Check-in</Button>}
-          {r.trangThai === 'DA_CHECK_IN' && <Button size="small" type="primary" onClick={() => hanhDong(r, 'hoan-thanh')}>Hoàn thành</Button>}
-          {r.trangThai === 'DA_XAC_NHAN' && <Button size="small" onClick={() => hanhDong(r, 'khong-den')}>Không đến</Button>}
-          {['CHO_XAC_NHAN', 'DA_XAC_NHAN'].includes(r.trangThai) && <Button size="small" danger onClick={() => hanhDong(r, 'huy')}>Hủy</Button>}
+          {r.trangThai === 'CHO_XAC_NHAN' && coQuyen('DAT_BAN_XAC_NHAN') && <Button size="small" type="primary" onClick={() => hanhDong(r, 'xac-nhan')}>Xác nhận</Button>}
+          {r.trangThai === 'DA_XAC_NHAN' && coQuyen('DAT_BAN_CHECK_IN') && <Button size="small" onClick={() => hanhDong(r, 'check-in')}>Check-in</Button>}
+          {r.trangThai === 'DA_CHECK_IN' && coQuyen('DAT_BAN_HOAN_THANH') && <Button size="small" type="primary" onClick={() => hanhDong(r, 'hoan-thanh')}>Hoàn thành</Button>}
+          {r.trangThai === 'DA_XAC_NHAN' && coQuyen('DAT_BAN_KHONG_DEN') && <Button size="small" onClick={() => hanhDong(r, 'khong-den')}>Không đến</Button>}
+          {['CHO_XAC_NHAN', 'DA_XAC_NHAN'].includes(r.trangThai) && coQuyen('DAT_BAN_HUY') && <Button size="small" danger onClick={() => hanhDong(r, 'huy')}>Hủy</Button>}
         </Space> },
       ]}
     /></Card>

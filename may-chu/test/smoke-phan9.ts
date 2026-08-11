@@ -39,6 +39,16 @@ function damBao(dieuKien: unknown, thongBao: string): asserts dieuKien {
   damBao(token, 'Không nhận được access token Admin.');
 
   const headers = { Authorization: `Bearer ${token}` };
+
+  const hienTai = await goi('/xac-thuc/thong-tin-hien-tai', { headers });
+  damBao(
+    hienTai.status === 200 &&
+    hienTai.json.thanhCong === true &&
+    Array.isArray(hienTai.json.duLieu?.quyen) &&
+    hienTai.json.duLieu.quyen.includes('DASHBOARD_XEM'),
+    'Thông tin hiện tại chưa trả danh sách quyền hợp lệ.',
+  );
+
   const dashboard = await goi('/quan-tri/dashboard', { headers });
   damBao(dashboard.status === 200 && dashboard.json.thanhCong === true, 'Dashboard Admin lỗi.');
 

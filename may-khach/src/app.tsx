@@ -3,6 +3,7 @@ import { Spin } from 'antd';
 import { Route, Routes } from 'react-router';
 import { BoCucCongKhai } from '@/bo-cuc/bo-cuc-cong-khai';
 import { BoCucQuanTri } from '@/bo-cuc/bo-cuc-quan-tri';
+import { BaoVeQuyen } from '@/thanh-phan/bao-ve-quyen';
 import { BaoVeTuyen } from '@/thanh-phan/bao-ve-tuyen';
 
 const TrangChu = lazy(() => import('@/trang/cong-khai/trang-chu').then((m) => ({ default: m.TrangChu })));
@@ -65,22 +66,22 @@ export function UngDung() {
     </Route>
     <Route element={<BaoVeTuyen quanTri />}>
       <Route path="quan-tri" element={<BoCucQuanTri />}>
-        <Route index element={<Dashboard />} />
-        <Route path="dat-ban" element={<QuanTriDatBan />} />
-        <Route path="khu-vuc" element={<QuanTriKhuVuc />} />
-        <Route path="ban-an" element={<QuanTriBanAn />} />
-        <Route path="danh-muc-mon" element={<QuanTriDanhMucMon />} />
-        <Route path="mon-an" element={<QuanTriMonAn />} />
-        <Route path="khach-hang" element={<QuanTriKhachHang />} />
-        <Route path="nhan-vien" element={<QuanTriNhanVien />} />
-        <Route path="khuyen-mai" element={<QuanTriKhuyenMai />} />
-        <Route path="danh-gia" element={<QuanTriDanhGia />} />
-        <Route path="bao-cao" element={<QuanTriBaoCao />} />
-        <Route path="vai-tro" element={<QuanTriVaiTro />} />
-        <Route path="gio-hoat-dong" element={<QuanTriGioHoatDong />} />
-        <Route path="ngay-dac-biet" element={<QuanTriNgayDacBiet />} />
-        <Route path="cau-hinh" element={<QuanTriCauHinh />} />
-        <Route path="nhat-ky" element={<QuanTriNhatKy />} />
+        <Route index element={<BaoVeQuyen quyen="DASHBOARD_XEM"><Dashboard /></BaoVeQuyen>} />
+        <Route path="dat-ban" element={<BaoVeQuyen quyen="DAT_BAN_XEM"><QuanTriDatBan /></BaoVeQuyen>} />
+        <Route path="khu-vuc" element={<BaoVeQuyen quyen="KHU_VUC_XEM"><QuanTriKhuVuc /></BaoVeQuyen>} />
+        <Route path="ban-an" element={<BaoVeQuyen quyen={['BAN_AN_XEM', 'KHU_VUC_XEM']}><QuanTriBanAn /></BaoVeQuyen>} />
+        <Route path="danh-muc-mon" element={<BaoVeQuyen quyen="DANH_MUC_MON_XEM"><QuanTriDanhMucMon /></BaoVeQuyen>} />
+        <Route path="mon-an" element={<BaoVeQuyen quyen={['MON_AN_XEM', 'DANH_MUC_MON_XEM']}><QuanTriMonAn /></BaoVeQuyen>} />
+        <Route path="khach-hang" element={<BaoVeQuyen quyen="KHACH_HANG_XEM"><QuanTriKhachHang /></BaoVeQuyen>} />
+        <Route path="nhan-vien" element={<BaoVeQuyen quyen="NHAN_VIEN_XEM"><QuanTriNhanVien /></BaoVeQuyen>} />
+        <Route path="khuyen-mai" element={<BaoVeQuyen quyen="KHUYEN_MAI_XEM"><QuanTriKhuyenMai /></BaoVeQuyen>} />
+        <Route path="danh-gia" element={<BaoVeQuyen quyen="DANH_GIA_XEM"><QuanTriDanhGia /></BaoVeQuyen>} />
+        <Route path="bao-cao" element={<BaoVeQuyen quyen="BAO_CAO_XEM"><QuanTriBaoCao /></BaoVeQuyen>} />
+        <Route path="vai-tro" element={<BaoVeQuyen quyen="VAI_TRO_QUAN_LY"><QuanTriVaiTro /></BaoVeQuyen>} />
+        <Route path="gio-hoat-dong" element={<BaoVeQuyen quyen="CAU_HINH_QUAN_LY"><QuanTriGioHoatDong /></BaoVeQuyen>} />
+        <Route path="ngay-dac-biet" element={<BaoVeQuyen quyen="CAU_HINH_QUAN_LY"><QuanTriNgayDacBiet /></BaoVeQuyen>} />
+        <Route path="cau-hinh" element={<BaoVeQuyen quyen="CAU_HINH_QUAN_LY"><QuanTriCauHinh /></BaoVeQuyen>} />
+        <Route path="nhat-ky" element={<BaoVeQuyen quyen="NHAT_KY_XEM"><QuanTriNhatKy /></BaoVeQuyen>} />
       </Route>
     </Route>
     <Route path="*" element={<KhongTimThay />} />
