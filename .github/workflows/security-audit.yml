@@ -1,0 +1,45 @@
+name: Security Audit
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Audit ${{ matrix.thu_muc }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        thu_muc:
+          - may-chu
+          - may-khach
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.thu_muc }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ${{ matrix.thu_muc }}/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Block high or critical vulnerabilities
+        run: npm run security:audit

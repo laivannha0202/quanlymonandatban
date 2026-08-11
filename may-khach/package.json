@@ -12,7 +12,8 @@
     "test:e2e:deep": "playwright test --project=chromium-desktop --workers=1 e2e/sau",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install chromium",
+    "security:audit": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@ant-design/icons": "^6.3.2",

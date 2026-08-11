@@ -17,7 +17,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "check": "npm run build && npm test -- --runInBand",
     "test:smoke": "tsx test/smoke-phan9.ts",
-    "test:concurrency": "tsx test/dat-ban-dong-thoi.ts"
+    "test:concurrency": "tsx test/dat-ban-dong-thoi.ts",
+    "security:audit": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
