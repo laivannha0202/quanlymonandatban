@@ -1,6 +1,5 @@
 export interface BoToken {
   accessToken: string;
-  refreshToken: string;
   loaiToken: string;
   accessHetHanSauGiay: number;
 }

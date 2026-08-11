@@ -276,6 +276,7 @@ export function BoCucQuanTri() {
             ) : null}
 
             <Button
+              aria-label="Đăng xuất"
               icon={<LogoutOutlined />}
               onClick={async () => {
                 await dangXuat();

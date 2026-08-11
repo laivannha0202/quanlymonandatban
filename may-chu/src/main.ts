@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -13,6 +14,7 @@ async function khoiDong(): Promise<void> {
   app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
   app.use(helmet());
+  app.use(cookieParser());
 
   const frontendOrigins = config
     .get<string>('FRONTEND_URL', 'http://localhost:5173')

@@ -4,11 +4,18 @@ const base = (process.env.BASE_URL ?? 'http://localhost:8080/api/v1').replace(/\
 
 type Json = Record<string, any>;
 
-async function goi(path: string, init?: RequestInit): Promise<{ status: number; json: Json }> {
+async function goi(
+  path: string,
+  init?: RequestInit,
+): Promise<{ status: number; json: Json; headers: Headers }> {
   const response = await fetch(`${base}${path}`, init);
   let json: Json = {};
   try { json = await response.json() as Json; } catch {}
-  return { status: response.status, json };
+  return {
+    status: response.status,
+    json,
+    headers: response.headers,
+  };
 }
 
 function damBao(dieuKien: unknown, thongBao: string): asserts dieuKien {
@@ -37,6 +44,35 @@ function damBao(dieuKien: unknown, thongBao: string): asserts dieuKien {
   const token = dangNhap.json.duLieu?.accessToken as string | undefined;
   damBao(dangNhap.status === 201 || dangNhap.status === 200, 'Đăng nhập Admin thất bại.');
   damBao(token, 'Không nhận được access token Admin.');
+  damBao(
+    !dangNhap.json.duLieu?.refreshToken,
+    'Refresh token không được phép xuất hiện trong JSON response.',
+  );
+
+  const setCookie = dangNhap.headers.get('set-cookie');
+  damBao(
+    setCookie?.includes('nha_hang_refresh_v1='),
+    'Đăng nhập chưa cấp refresh cookie.',
+  );
+  damBao(
+    setCookie?.toLowerCase().includes('httponly'),
+    'Refresh cookie thiếu HttpOnly.',
+  );
+
+  const cookie = setCookie!.split(';', 1)[0];
+  const lamMoi = await goi('/xac-thuc/lam-moi-token', {
+    method: 'POST',
+    headers: {
+      Cookie: cookie,
+      Accept: 'application/json',
+    },
+  });
+  damBao(
+    (lamMoi.status === 200 || lamMoi.status === 201) &&
+    Boolean(lamMoi.json.duLieu?.accessToken) &&
+    !lamMoi.json.duLieu?.refreshToken,
+    'Refresh cookie flow không hợp lệ.',
+  );
 
   const headers = { Authorization: `Bearer ${token}` };
 

@@ -38,7 +38,6 @@ export function layThongTinAdmin() {
 
 type BoTokenE2E = {
   accessToken: string;
-  refreshToken: string;
   loaiToken: string;
   accessHetHanSauGiay: number;
 };
