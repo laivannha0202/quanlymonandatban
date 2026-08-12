@@ -5,12 +5,13 @@ import {
 } from '@ant-design/icons';
 import { Alert, Button, Form, Input, Space } from 'antd';
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { xacThucApi } from '@/dich-vu/xac-thuc.api';
 import { LoiApi } from '@/dich-vu/http';
 import { KhungXacThuc } from '@/thanh-phan/khung-xac-thuc';
 
 export function QuenMatKhau() {
+  const navigate = useNavigate();
   const [thongBao, setThongBao] = useState('');
   const [tokenDev, setTokenDev] = useState('');
   const [loi, setLoi] = useState('');
@@ -28,8 +29,18 @@ export function QuenMatKhau() {
           type="success"
           showIcon
           message={thongBao}
-          description={tokenDev ? `Token DEV: ${tokenDev}` : undefined}
+          description="Vì lý do bảo mật, hệ thống không hiển thị mã đặt lại mật khẩu trên màn hình."
           className="mb-16"
+          action={
+            tokenDev ? (
+              <Button
+                size="small"
+                onClick={() => navigate(`/dat-lai-mat-khau?token=${encodeURIComponent(tokenDev)}`)}
+              >
+                Tiếp tục đặt lại mật khẩu
+              </Button>
+            ) : undefined
+          }
         />
       )}
 

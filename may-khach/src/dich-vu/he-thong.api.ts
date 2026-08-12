@@ -1,6 +1,13 @@
 import { goiApi, taoQuery } from './http';
 import type { DanhSachPhanTrang } from '@/kieu/api';
 
+export interface ThongTinNhaHangCongKhai {
+  tenNhaHang: string;
+  diaChi?: string | null;
+  soDienThoai?: string | null;
+  email?: string | null;
+}
+
 export interface DanhMucQuanTri {
   id: string;
   maDanhMuc: string;
@@ -139,6 +146,8 @@ type KhuyenMaiPayload = {
 };
 
 export const heThongApi = {
+  thongTinNhaHangCongKhai: () => goiApi<ThongTinNhaHangCongKhai>('/cau-hinh/cong-khai'),
+
   khuyenMaiCongKhai: () => goiApi<KhuyenMai[]>('/khuyen-mai/dang-ap-dung'),
 
   thongBao: (p: Record<string, string | number | undefined> = {}) =>

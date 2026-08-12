@@ -21,7 +21,7 @@ export function DangNhap() {
     <KhungXacThuc
       eyebrow="CHÀO MỪNG TRỞ LẠI"
       tieuDe="Đăng nhập"
-      moTa="Truy cập lịch đặt bàn của bạn hoặc khu vực vận hành dành cho nhân viên."
+      moTa="Đăng nhập để xem lịch đặt bàn, theo dõi trạng thái và quản lý tài khoản của bạn."
     >
       {loi && <Alert type="error" showIcon message={loi} className="mb-16" />}
       <Form
@@ -54,8 +54,8 @@ export function DangNhap() {
       >
         <Form.Item
           name="taiKhoan"
-          label="Email hoặc tên đăng nhập"
-          rules={[{ required: true, message: 'Nhập email hoặc tên đăng nhập' }]}
+          label="Email hoặc tài khoản nhân viên"
+          rules={[{ required: true, message: 'Nhập email hoặc tài khoản' }]}
         >
           <Input prefix={<MailOutlined />} autoComplete="username" placeholder="email@example.com" />
         </Form.Item>

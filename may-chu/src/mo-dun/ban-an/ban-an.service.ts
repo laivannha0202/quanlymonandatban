@@ -58,6 +58,7 @@ export class BanAnService {
 
   async tao(dto: TaoBanAnDto) {
     this.kiemTraSucChua(dto.sucChua, dto.sucChuaToiDa);
+    this.kiemTraTrangThaiQuanTri(dto.trangThai);
     const khuVucId = bigintTuChuoi(dto.khuVucId, 'ID khu vực');
     await this.kiemTraKhuVuc(khuVucId);
 
@@ -83,6 +84,17 @@ export class BanAnService {
 
   async capNhat(id: string, dto: CapNhatBanAnDto) {
     const ban = await this.chiTiet(id);
+
+    if (dto.maBan !== undefined && dto.maBan !== ban.ma_ban) {
+      throw new LoiNghiepVuException(
+        'BAN_AN_006',
+        'Mã bàn được cố định sau khi tạo và không thể thay đổi.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    this.kiemTraTrangThaiQuanTri(dto.trangThai, ban.trang_thai);
+
     const sucChua = dto.sucChua ?? ban.suc_chua;
     const sucChuaToiDa = dto.sucChuaToiDa ?? ban.suc_chua_toi_da;
     this.kiemTraSucChua(sucChua, sucChuaToiDa);
@@ -93,17 +105,9 @@ export class BanAnService {
       await this.kiemTraKhuVuc(khuVucId);
     }
 
-    if (dto.maBan && dto.maBan !== ban.ma_ban) {
-      const trung = await this.prisma.ban_an.findUnique({ where: { ma_ban: dto.maBan } });
-      if (trung) {
-        throw new LoiNghiepVuException('BAN_AN_002', 'Mã bàn đã tồn tại.', HttpStatus.CONFLICT);
-      }
-    }
-
     return this.prisma.ban_an.update({
       where: { id: ban.id },
       data: {
-        ...(dto.maBan !== undefined ? { ma_ban: dto.maBan } : {}),
         ...(dto.tenBan !== undefined ? { ten_ban: dto.tenBan } : {}),
         ...(dto.khuVucId !== undefined ? { khu_vuc_id: khuVucId } : {}),
         ...(dto.sucChua !== undefined ? { suc_chua: dto.sucChua } : {}),
@@ -164,6 +168,18 @@ export class BanAnService {
       ...kv,
       banAns: ban.filter((item) => item.khu_vuc_id === kv.id),
     }));
+  }
+
+  private kiemTraTrangThaiQuanTri(trangThaiMoi?: string, trangThaiHienTai?: string): void {
+    if (!trangThaiMoi || trangThaiMoi === trangThaiHienTai) return;
+
+    if (trangThaiMoi === 'DANG_SU_DUNG' || trangThaiHienTai === 'DANG_SU_DUNG') {
+      throw new LoiNghiepVuException(
+        'BAN_AN_005',
+        'Trạng thái Đang sử dụng chỉ được thay đổi bởi quy trình check-in/hoàn thành đặt bàn.',
+        HttpStatus.CONFLICT,
+      );
+    }
   }
 
   private kiemTraSucChua(sucChua: number, sucChuaToiDa: number): void {

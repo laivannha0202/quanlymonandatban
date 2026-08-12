@@ -36,6 +36,10 @@ export class DatBanQuanTriController {
     @MaYeuCauHienTai() maYeuCau: string | null,
   ) { return this.service.taoQuanTri(dto, nguoiDung, maYeuCau); }
 
+  @Get('thong-so/check-in')
+  @CanQuyen('DAT_BAN_XEM')
+  thongSoCheckIn() { return this.workflow.thongSoCheckIn(); }
+
   @Get(':id')
   @CanQuyen('DAT_BAN_XEM')
   chiTiet(@Param('id') id: string) { return this.service.chiTietQuanTri(id); }

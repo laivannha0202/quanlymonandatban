@@ -37,3 +37,6 @@ Thumbs.db
 
 # Old nested backend snapshot / patch
 may-chu/test/may-chu/
+
+# Runtime uploaded media
+may-chu/uploads/

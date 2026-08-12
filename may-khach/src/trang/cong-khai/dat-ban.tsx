@@ -27,8 +27,11 @@ import {
   Typography,
 } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
+import { dinhDangNgay } from '@/cau-hinh/ngay-gio';
 import { datBanApi, type TaoDatBanPayload } from '@/dich-vu/dat-ban.api';
+import { khachHangApi, type HoSoKhachHang } from '@/dich-vu/khach-hang.api';
 import { LoiApi } from '@/dich-vu/http';
+import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import type { BanAnPhuongAn, DatBan } from '@/kieu/nghiep-vu';
 
 type GiaTriForm = Omit<TaoDatBanPayload, 'banAnIds'>;
@@ -41,6 +44,7 @@ function tenBan(p: BanAnPhuongAn): string {
 
 export function DatBanPage() {
   const { message } = App.useApp();
+  const { nguoiDung } = useXacThuc();
   const [form] = Form.useForm<GiaTriForm>();
   const ngay = Form.useWatch('ngay', form);
   const gioBatDau = Form.useWatch('gioBatDau', form);
@@ -55,8 +59,40 @@ export function DatBanPage() {
   const [dangGui, setDangGui] = useState(false);
   const [ketQua, setKetQua] = useState<DatBan | null>(null);
   const [loi, setLoi] = useState('');
+  const [hoSoKhach, setHoSoKhach] = useState<HoSoKhachHang | null>(null);
 
   const ngayChuoi = ngay || '';
+
+  useEffect(() => {
+    if (!nguoiDung || nguoiDung.vaiTro.maVaiTro !== 'KHACH_HANG') {
+      setHoSoKhach(null);
+      return;
+    }
+
+    let conHieuLuc = true;
+
+    khachHangApi
+      .hoSo()
+      .then((hoSo) => {
+        if (!conHieuLuc) return;
+
+        setHoSoKhach(hoSo);
+
+        const hienTai = form.getFieldsValue(['hoTen', 'soDienThoai', 'email']);
+        form.setFieldsValue({
+          ...(!hienTai.hoTen?.trim() && hoSo.hoTen ? { hoTen: hoSo.hoTen } : {}),
+          ...(!hienTai.soDienThoai?.trim() && hoSo.soDienThoai ? { soDienThoai: hoSo.soDienThoai } : {}),
+          ...(!hienTai.email?.trim() && hoSo.email ? { email: hoSo.email } : {}),
+        });
+      })
+      .catch(() => {
+        if (conHieuLuc) setHoSoKhach(null);
+      });
+
+    return () => {
+      conHieuLuc = false;
+    };
+  }, [form, nguoiDung]);
 
   useEffect(() => {
     setKhungGio([]);
@@ -149,8 +185,8 @@ export function DatBanPage() {
             column={{ xs: 1, sm: 2 }}
             items={[
               { key: 'ma', label: 'Mã đặt bàn', children: <Typography.Text copyable strong>{ketQua.maDatBan}</Typography.Text> },
-              { key: 'khach', label: 'Khách hàng', children: ketQua.hoTen },
-              { key: 'ngay', label: 'Ngày', children: ketQua.ngayDat },
+              { key: 'khach', label: 'Khách hàng', children: ketQua.hoTen || form.getFieldValue('hoTen') || '—' },
+              { key: 'ngay', label: 'Ngày', children: dinhDangNgay(ketQua.ngayDat || form.getFieldValue('ngay')) },
               { key: 'gio', label: 'Giờ', children: `${ketQua.gioBatDau} – ${ketQua.gioKetThuc}` },
               { key: 'nguoi', label: 'Số người', children: `${ketQua.soNguoi} khách` },
               { key: 'ban', label: 'Bàn', children: ketQua.banAns?.map((b) => b.tenBan || b.maBan).join(', ') || 'Hệ thống sẽ sắp bàn' },
@@ -159,7 +195,17 @@ export function DatBanPage() {
           <Space wrap className="booking-success-actions">
             <Button type="primary" href="/tra-cuu">Tra cứu đặt bàn</Button>
             <Button href="/thuc-don">Xem thực đơn</Button>
-            <Button onClick={() => { setKetQua(null); form.resetFields(); setPhuongAn([]); setChon(''); }}>Đặt thêm bàn</Button>
+            <Button onClick={() => { setKetQua(null); form.resetFields();
+              if (hoSoKhach) {
+                form.setFieldsValue({
+                  hoTen: hoSoKhach.hoTen,
+                  soDienThoai: hoSoKhach.soDienThoai,
+                  email: hoSoKhach.email || undefined,
+                  soNguoi: 2,
+                });
+              }
+              setPhuongAn([]);
+              setChon(''); }}>Đặt thêm bàn</Button>
           </Space>
         </Card>
       </div>
@@ -173,7 +219,7 @@ export function DatBanPage() {
           <Typography.Text className="eyebrow">ĐẶT BÀN TRỰC TUYẾN</Typography.Text>
           <Typography.Title level={1}>Chọn thời gian, tìm bàn, xác nhận trong vài phút.</Typography.Title>
           <Typography.Paragraph>
-            Hệ thống kiểm tra khung giờ và phương án bàn trực tiếp trước khi ghi nhận yêu cầu.
+            Chọn ngày, giờ và số khách để xem ngay những phương án bàn còn phù hợp.
           </Typography.Paragraph>
         </div>
       </section>
@@ -234,7 +280,7 @@ export function DatBanPage() {
                   <span className="booking-section-icon"><ClockCircleOutlined /></span>
                   <div>
                     <Typography.Title level={4}>Thời gian & số khách</Typography.Title>
-                    <Typography.Text type="secondary">Chọn ngày để hệ thống tải khung giờ đang nhận đặt.</Typography.Text>
+                    <Typography.Text type="secondary">Chọn ngày để xem các khung giờ nhà hàng còn nhận đặt.</Typography.Text>
                   </div>
                 </div>
 
@@ -309,7 +355,9 @@ export function DatBanPage() {
                           <label key={ids} className={`booking-table-option ${chon === ids ? 'selected' : ''}`}>
                             <Radio value={ids} />
                             <div>
-                              <strong>{p.kieu === 'GHEP_BAN' ? 'Ghép bàn' : 'Bàn'} · {tenBan(p)}</strong>
+                              <strong>
+                                {p.kieu === 'GHEP_BAN' ? 'Ghép bàn' : tenBan(p)}
+                              </strong>
                               <span>
                                 {p.banAns[0]?.tenKhuVuc ? `${p.banAns[0].tenKhuVuc} · ` : ''}
                                 Phù hợp tối đa {p.tongSucChuaToiDa} khách
@@ -358,7 +406,7 @@ export function DatBanPage() {
                 items={[
                   { key: 'ten', label: 'Khách hàng', children: hoTen || 'Chưa nhập' },
                   { key: 'sdt', label: 'Điện thoại', children: soDienThoai || 'Chưa nhập' },
-                  { key: 'ngay', label: 'Ngày', children: ngay || 'Chưa chọn' },
+                  { key: 'ngay', label: 'Ngày', children: ngay ? dinhDangNgay(ngay) : 'Chưa chọn' },
                   { key: 'gio', label: 'Giờ', children: gioBatDau || 'Chưa chọn' },
                   { key: 'nguoi', label: 'Số khách', children: soNguoi ? `${soNguoi} khách` : 'Chưa chọn' },
                   {
@@ -375,7 +423,7 @@ export function DatBanPage() {
               <Divider />
               <Space direction="vertical" size={10}>
                 <Typography.Text type="secondary"><CheckCircleOutlined /> Chỉ hiện khung giờ nhà hàng đang nhận đặt.</Typography.Text>
-                <Typography.Text type="secondary"><CheckCircleOutlined /> Hệ thống kiểm tra xung đột bàn trước khi ghi nhận.</Typography.Text>
+                <Typography.Text type="secondary"><CheckCircleOutlined /> Bàn được kiểm tra lại trước khi ghi nhận yêu cầu.</Typography.Text>
                 <Typography.Text type="secondary"><CheckCircleOutlined /> Bạn sẽ nhận mã đặt bàn để tra cứu.</Typography.Text>
               </Space>
             </Card>

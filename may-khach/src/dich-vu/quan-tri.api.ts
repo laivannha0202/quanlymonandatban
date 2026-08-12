@@ -11,6 +11,16 @@ export interface DashboardData {
   datBanGanToi: DatBan[];
 }
 
+export interface KetQuaTaiAnh {
+  duongDan: string;
+  urlCongKhai: string;
+  tenTep: string;
+  mimeType: 'image/webp';
+  kichThuocByte: number;
+  chieuRong: number;
+  chieuCao: number;
+}
+
 export interface KhuVucQuanTri {
   id: string;
   maKhuVuc: string;
@@ -114,6 +124,20 @@ export interface NgayDacBietQuanTri {
   ghiChu?: string | null;
 }
 
+export type TaoDatBanQuanTriPayload = {
+  hoTen: string;
+  soDienThoai: string;
+  email?: string;
+  ngay: string;
+  gioBatDau: string;
+  soNguoi: number;
+  banAnIds: string[];
+  nguonDat?: 'DIEN_THOAI' | 'FACEBOOK' | 'TRUC_TIEP' | 'KHAC';
+  xacNhanNgay?: boolean;
+  ghiChu?: string;
+  ghiChuNoiBo?: string;
+};
+
 export type KhuVucPayload = {
   maKhuVuc: string;
   tenKhuVuc: string;
@@ -210,6 +234,16 @@ export const quanTriApi = {
   dashboard: () => goiApi<DashboardData>('/quan-tri/dashboard', { xacThuc: true }),
   datBan: (p: Record<string, string | number | undefined> = {}) =>
     goiApi<DanhSachPhanTrang<DatBan>>(`/quan-tri/dat-ban${taoQuery({ trang: 1, kichThuoc: 50, ...p })}`, { xacThuc: true }),
+  datBanChiTiet: (id: string) =>
+    goiApi<DatBan>(`/quan-tri/dat-ban/${id}`, { xacThuc: true }),
+  thongSoCheckIn: () =>
+    goiApi<{ checkInSomToiDaPhut: number; thoiGianChoKhachPhut: number }>('/quan-tri/dat-ban/thong-so/check-in', { xacThuc: true }),
+  taoDatBan: (duLieu: TaoDatBanQuanTriPayload) =>
+    goiApi<DatBan>('/quan-tri/dat-ban', {
+      method: 'POST',
+      xacThuc: true,
+      body: JSON.stringify(duLieu),
+    }),
   chuyenTrangThaiDatBan: (id: string, hanhDong: 'xac-nhan' | 'check-in' | 'hoan-thanh' | 'khong-den' | 'huy') =>
     goiApi<DatBan>(`/quan-tri/dat-ban/${id}/${hanhDong}`, {
       method: 'PATCH', xacThuc: true, body: hanhDong === 'huy' ? JSON.stringify({}) : undefined,
@@ -223,6 +257,24 @@ export const quanTriApi = {
     goiApi<KhuVucQuanTri>(`/quan-tri/khu-vuc/${id}`, { method: 'PATCH', xacThuc: true, body: JSON.stringify(duLieu) }),
   xoaKhuVuc: (id: string) =>
     goiApi<{ daXoa: boolean }>(`/quan-tri/khu-vuc/${id}`, { method: 'DELETE', xacThuc: true }),
+  taiAnhKhuVuc: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return goiApi<KetQuaTaiAnh>('/quan-tri/tai-len/khu-vuc', {
+      method: 'POST',
+      xacThuc: true,
+      body: form,
+    });
+  },
+  taiAnhMonAn: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return goiApi<KetQuaTaiAnh>('/quan-tri/tai-len/mon-an', {
+      method: 'POST',
+      xacThuc: true,
+      body: form,
+    });
+  },
 
   banAn: (p: Record<string, string | number | undefined> = {}) =>
     goiApi<DanhSachPhanTrang<BanAnQuanTri>>(`/quan-tri/ban-an${taoQuery({ trang: 1, kichThuoc: 20, ...p })}`, { xacThuc: true }),

@@ -29,7 +29,6 @@ import {
   Layout,
   Menu,
   Space,
-  Tag,
   Typography,
   type MenuProps,
 } from 'antd';
@@ -39,6 +38,24 @@ import { moiTruong } from '@/cau-hinh/moi-truong';
 import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 
 const { Header, Sider, Content } = Layout;
+
+const tenVaiTroQuanTri: Record<string, string> = {
+  QUAN_TRI_VIEN: 'Quản trị viên',
+  QUAN_LY: 'Quản lý',
+  NHAN_VIEN: 'Nhân viên',
+  KHACH_HANG: 'Khách hàng',
+};
+
+function hienThiVaiTro(ma?: string) {
+  if (!ma) return 'Tài khoản';
+  return tenVaiTroQuanTri[ma] || ma.replaceAll('_', ' ').toLocaleLowerCase('vi-VN');
+}
+
+function tenThuongHieuAdmin(ten: string) {
+  const gon = ten.replace(/^Nhà hàng\s*/i, '').trim();
+  return gon || 'Hương Việt';
+}
+
 
 const muc = [
   {
@@ -184,7 +201,9 @@ export function BoCucQuanTri() {
       ?.key ?? '';
 
   const mucHienTai =
-    muc.find((item) => pathname === item.key || pathname.startsWith(`${item.key}/`)) ?? null;
+    [...muc]
+      .sort((a, b) => b.key.length - a.key.length)
+      .find((item) => pathname === item.key || pathname.startsWith(`${item.key}/`)) ?? null;
 
   const laDesktop = Boolean(screens.lg);
 
@@ -280,7 +299,7 @@ export function BoCucQuanTri() {
             <span className="admin-brand-mark"><ShopOutlined /></span>
             {!thuGon ? (
               <span className="admin-brand-copy">
-                <strong>{moiTruong.tenNhaHang}</strong>
+                <strong>{tenThuongHieuAdmin(moiTruong.tenNhaHang)}</strong>
                 <small>Quản trị vận hành</small>
               </span>
             ) : null}
@@ -351,9 +370,8 @@ export function BoCucQuanTri() {
                 <Avatar icon={<UserOutlined />} />
                 <span className="admin-user-copy">
                   <strong>{nguoiDung?.tenDangNhap}</strong>
-                  <small>{nguoiDung?.vaiTro.maVaiTro}</small>
+                  <small>{hienThiVaiTro(nguoiDung?.vaiTro.maVaiTro)}</small>
                 </span>
-                <Tag className="admin-online-tag" color="green">Online</Tag>
               </button>
             </Dropdown>
 

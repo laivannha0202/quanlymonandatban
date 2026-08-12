@@ -14,3 +14,10 @@ export function dinhDangNgay(value?: string | Date | null) {
   const d = dayjs(value);
   return d.isValid() ? d.format('DD/MM/YYYY') : String(value);
 }
+
+export function dinhDangGio(value?: string | Date | null) {
+  if (!value) return '—';
+  const d = dayjs(value);
+  return d.isValid() ? d.format('HH:mm') : String(value);
+}
+

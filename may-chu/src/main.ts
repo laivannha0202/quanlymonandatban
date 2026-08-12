@@ -2,16 +2,34 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { resolve } from 'node:path';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function khoiDong(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
   app.setGlobalPrefix('api/v1');
+  app.useStaticAssets(
+    resolve(config.get<string>('UPLOAD_DIR', 'uploads')),
+    {
+      prefix: '/uploads/',
+      setHeaders: (response) => {
+        response.setHeader(
+          'Cross-Origin-Resource-Policy',
+          'cross-origin',
+        );
+        response.setHeader(
+          'Cache-Control',
+          'public, max-age=86400',
+        );
+      },
+    },
+  );
   app.enableShutdownHooks();
   app.use(helmet());
   app.use(cookieParser());

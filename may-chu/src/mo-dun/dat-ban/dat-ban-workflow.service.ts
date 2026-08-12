@@ -26,6 +26,15 @@ export class DatBanWorkflowService {
     return this.chuyenTrangThai(id, 'DA_XAC_NHAN', 'XAC_NHAN', nguoiDung, undefined, maYeuCau);
   }
 
+  async thongSoCheckIn() {
+    const [checkInSomToiDaPhut, thoiGianChoKhachPhut] = await Promise.all([
+      this.cauHinh.laySo('CHECK_IN_SOM_TOI_DA_PHUT'),
+      this.cauHinh.laySo('THOI_GIAN_CHO_KHACH_PHUT'),
+    ]);
+
+    return { checkInSomToiDaPhut, thoiGianChoKhachPhut };
+  }
+
   async checkIn(
     id: string,
     nguoiDung: NguoiDungXacThuc,

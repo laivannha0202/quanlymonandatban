@@ -10,6 +10,31 @@ export class CauHinhService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  async thongTinCongKhai() {
+    const cacKhoa = [
+      'TEN_NHA_HANG',
+      'DIA_CHI_NHA_HANG',
+      'SO_DIEN_THOAI_NHA_HANG',
+      'EMAIL_NHA_HANG',
+    ];
+
+    const danhSach = await this.prisma.cau_hinh.findMany({
+      where: { khoa: { in: cacKhoa } },
+      select: { khoa: true, gia_tri: true },
+    });
+
+    const map = new Map(
+      danhSach.map((item) => [item.khoa, item.gia_tri.trim()]),
+    );
+
+    return {
+      tenNhaHang: map.get('TEN_NHA_HANG') || 'Nhà hàng',
+      diaChi: map.get('DIA_CHI_NHA_HANG') || null,
+      soDienThoai: map.get('SO_DIEN_THOAI_NHA_HANG') || null,
+      email: map.get('EMAIL_NHA_HANG') || null,
+    };
+  }
+
   async danhSach(nhom?: string) {
     return this.prisma.cau_hinh.findMany({
       where: nhom ? { nhom } : undefined,

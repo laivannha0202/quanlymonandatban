@@ -27,9 +27,11 @@ import {
   Typography,
   type MenuProps,
 } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { moiTruong } from '@/cau-hinh/moi-truong';
+import { heThongApi } from '@/dich-vu/he-thong.api';
 import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 
 const { Header, Content, Footer } = Layout;
@@ -47,6 +49,17 @@ export function BoCucCongKhai() {
   const location = useLocation();
   const screens = Grid.useBreakpoint();
   const [moMenu, setMoMenu] = useState(false);
+  const thongTinQuery = useQuery({
+    queryKey: ['cau-hinh-cong-khai'],
+    queryFn: heThongApi.thongTinNhaHangCongKhai,
+    staleTime: 5 * 60_000,
+  });
+  const thongTinNhaHang = {
+    tenNhaHang: thongTinQuery.data?.tenNhaHang || moiTruong.tenNhaHang,
+    diaChi: thongTinQuery.data?.diaChi || null,
+    soDienThoai: thongTinQuery.data?.soDienThoai || null,
+    email: thongTinQuery.data?.email || null,
+  };
   const laDesktop = Boolean(screens.md);
 
   const di = (duongDan: string) => {
@@ -104,10 +117,10 @@ export function BoCucCongKhai() {
   return (
     <Layout className="public-shell">
       <Header className="public-header">
-        <Link className="brand" to="/" aria-label={`${moiTruong.tenNhaHang} - Trang chủ`}>
+        <Link className="brand" to="/" aria-label={`${thongTinNhaHang.tenNhaHang} - Trang chủ`}>
           <span className="brand-mark"><ShopOutlined /></span>
           <span className="brand-copy">
-            <strong>{moiTruong.tenNhaHang}</strong>
+            <strong>{thongTinNhaHang.tenNhaHang}</strong>
             <small>Ẩm thực & đặt bàn</small>
           </span>
         </Link>
@@ -179,7 +192,7 @@ export function BoCucCongKhai() {
       </Header>
 
       <Drawer
-        title={moiTruong.tenNhaHang}
+        title={thongTinNhaHang.tenNhaHang}
         placement="right"
         width={320}
         open={moMenu}
@@ -211,7 +224,7 @@ export function BoCucCongKhai() {
                 <Link className="brand footer-brand" to="/">
                   <span className="brand-mark"><ShopOutlined /></span>
                   <span className="brand-copy">
-                    <strong>{moiTruong.tenNhaHang}</strong>
+                    <strong>{thongTinNhaHang.tenNhaHang}</strong>
                     <small>Ẩm thực & đặt bàn</small>
                   </span>
                 </Link>
@@ -232,17 +245,23 @@ export function BoCucCongKhai() {
             <Col xs={12} md={9}>
               <Typography.Title level={5}>Liên hệ</Typography.Title>
               <Space direction="vertical" size={8}>
-                <Typography.Text type="secondary"><EnvironmentOutlined /> Khu vực phục vụ tại nhà hàng</Typography.Text>
-                <Typography.Text type="secondary"><PhoneOutlined /> 0900 000 000</Typography.Text>
-                <Typography.Text type="secondary"><MailOutlined /> hello@nhahang.local</Typography.Text>
-                <Typography.Text type="secondary"><ClockCircleOutlined /> Mở cửa 10:00 – 22:00</Typography.Text>
+                {thongTinNhaHang.diaChi ? (
+                  <Typography.Text type="secondary"><EnvironmentOutlined /> {thongTinNhaHang.diaChi}</Typography.Text>
+                ) : null}
+                {thongTinNhaHang.soDienThoai ? (
+                  <Typography.Text type="secondary"><PhoneOutlined /> {thongTinNhaHang.soDienThoai}</Typography.Text>
+                ) : null}
+                {thongTinNhaHang.email ? (
+                  <Typography.Text type="secondary"><MailOutlined /> {thongTinNhaHang.email}</Typography.Text>
+                ) : null}
+                <Typography.Text type="secondary"><ClockCircleOutlined /> Xem khung giờ khả dụng khi đặt bàn</Typography.Text>
               </Space>
             </Col>
           </Row>
           <Divider />
           <div className="footer-bottom">
-            <Typography.Text type="secondary">© 2026 {moiTruong.tenNhaHang}. Hệ thống quản lý & đặt bàn trực tuyến.</Typography.Text>
-            <Typography.Text type="secondary">Thiết kế responsive · Dữ liệu đồng bộ API</Typography.Text>
+            <Typography.Text type="secondary">© 2026 {thongTinNhaHang.tenNhaHang}. Ẩm thực Việt & đặt bàn trực tuyến.</Typography.Text>
+            <Typography.Text type="secondary">Món Việt thân quen · Không gian ấm cúng</Typography.Text>
           </div>
         </div>
       </Footer>

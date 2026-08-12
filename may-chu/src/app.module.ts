@@ -24,6 +24,7 @@ import { NhanVienModule } from './mo-dun/nhan-vien/nhan-vien.module';
 import { NhatKyModule } from './mo-dun/nhat-ky/nhat-ky.module';
 import { SucKhoeModule } from './mo-dun/suc-khoe/suc-khoe.module';
 import { ThongBaoModule } from './mo-dun/thong-bao/thong-bao.module';
+import { TaiLenModule } from './mo-dun/tai-len/tai-len.module';
 import { VaiTroModule } from './mo-dun/vai-tro/vai-tro.module';
 import { XacThucModule } from './mo-dun/xac-thuc/xac-thuc.module';
 
@@ -60,6 +61,7 @@ import { XacThucModule } from './mo-dun/xac-thuc/xac-thuc.module';
     KhuyenMaiModule,
     DanhGiaModule,
     ThongBaoModule,
+    TaiLenModule,
     DashboardModule,
     BaoCaoModule,
     NhatKyModule,

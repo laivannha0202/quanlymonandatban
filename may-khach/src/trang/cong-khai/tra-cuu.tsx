@@ -23,7 +23,43 @@ import { datBanApi } from '@/dich-vu/dat-ban.api';
 import { LoiApi } from '@/dich-vu/http';
 import type { DatBan } from '@/kieu/nghiep-vu';
 import { TrangThai } from '@/thanh-phan/trang-thai';
-import { dinhDangNgay, dinhDangNgayGio } from '@/cau-hinh/ngay-gio';
+import { dinhDangGio, dinhDangNgay, dinhDangNgayGio } from '@/cau-hinh/ngay-gio';
+
+
+const nhanHanhDong: Record<string, string> = {
+  TAO_DAT_BAN: 'Đã tạo yêu cầu đặt bàn',
+  CAP_NHAT_DAT_BAN: 'Đã cập nhật thông tin đặt bàn',
+  XAC_NHAN_DAT_BAN: 'Đã xác nhận đặt bàn',
+  XAC_NHAN: 'Đã xác nhận đặt bàn',
+  GAN_BAN: 'Đã cập nhật bàn phục vụ',
+  THAY_DOI_BAN: 'Đã thay đổi bàn phục vụ',
+  CHECK_IN: 'Khách đã đến nhà hàng',
+  DA_CHECK_IN: 'Khách đã đến nhà hàng',
+  HOAN_THANH: 'Đã hoàn thành lượt đặt bàn',
+  HOAN_THANH_DAT_BAN: 'Đã hoàn thành lượt đặt bàn',
+  HUY: 'Đã hủy đặt bàn',
+  HUY_DAT_BAN: 'Đã hủy đặt bàn',
+  KHONG_DEN: 'Khách không đến',
+};
+
+function hienThiHanhDong(value?: string | null) {
+  if (!value) return 'Đã cập nhật đặt bàn';
+  if (nhanHanhDong[value]) return nhanHanhDong[value];
+
+  const chu = value
+    .replaceAll('_', ' ')
+    .toLocaleLowerCase('vi-VN')
+    .trim();
+
+  return chu ? `${chu.charAt(0).toLocaleUpperCase('vi-VN')}${chu.slice(1)}` : 'Đã cập nhật đặt bàn';
+}
+
+function khoangGio(batDau?: string | Date | null, ketThuc?: string | Date | null) {
+  const dau = dinhDangGio(batDau);
+  const cuoi = dinhDangGio(ketThuc);
+  if (dau === '—') return '—';
+  return cuoi === '—' ? dau : `${dau} – ${cuoi}`;
+}
 
 export function TraCuu() {
   const [kq, setKq] = useState<DatBan | null>(null);
@@ -92,7 +128,7 @@ export function TraCuu() {
                 { key: 'ten', label: 'Khách', children: kq.hoTen },
                 { key: 'sdt', label: 'Điện thoại', children: kq.soDienThoai },
                 { key: 'ngay', label: 'Ngày', children: <span><CalendarOutlined /> {dinhDangNgay(kq.ngayDat)}</span> },
-                { key: 'gio', label: 'Giờ', children: <span><ClockCircleOutlined /> {dinhDangNgayGio(kq.gioBatDau)}</span> },
+                { key: 'gio', label: 'Giờ', children: <span><ClockCircleOutlined /> {khoangGio(kq.gioBatDau, kq.gioKetThuc)}</span> },
                 { key: 'nguoi', label: 'Số người', children: <span><TeamOutlined /> {kq.soNguoi} khách</span> },
                 {
                   key: 'ban',
@@ -109,7 +145,7 @@ export function TraCuu() {
                   items={kq.lichSu.map((x) => ({
                     children: (
                       <div>
-                        <strong>{x.hanhDong}</strong>
+                        <strong>{hienThiHanhDong(x.hanhDong)}</strong>
                         <div><Typography.Text type="secondary">{dinhDangNgayGio(x.thoiGian)}</Typography.Text></div>
                       </div>
                     ),

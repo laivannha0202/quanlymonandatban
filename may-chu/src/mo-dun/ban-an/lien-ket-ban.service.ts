@@ -25,13 +25,20 @@ export class LienKetBanService {
 
     const ban = await this.prisma.ban_an.findMany({
       where: { id: { in: [ban1Id, ban2Id] }, ngay_xoa: null },
-      select: { id: true, khu_vuc_id: true },
+      select: { id: true, khu_vuc_id: true, trang_thai: true },
     });
     if (ban.length !== 2) {
       throw new LoiNghiepVuException('LIEN_KET_BAN_002', 'Một trong hai bàn không tồn tại.', HttpStatus.NOT_FOUND);
     }
     if (ban[0].khu_vuc_id !== ban[1].khu_vuc_id) {
       throw new LoiNghiepVuException('LIEN_KET_BAN_003', 'Chỉ cho phép ghép các bàn trong cùng khu vực.');
+    }
+    if (ban.some((item) => item.trang_thai === 'NGUNG_SU_DUNG')) {
+      throw new LoiNghiepVuException(
+        'LIEN_KET_BAN_006',
+        'Không thể tạo liên kết ghép với bàn đã ngừng sử dụng.',
+        HttpStatus.CONFLICT,
+      );
     }
 
     const daCo = await this.prisma.lien_ket_ban.findFirst({

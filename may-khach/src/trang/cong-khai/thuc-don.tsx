@@ -65,7 +65,7 @@ export function ThucDon() {
           <Typography.Text className="eyebrow">THỰC ĐƠN NHÀ HÀNG</Typography.Text>
           <Typography.Title level={1}>Chọn món bạn thích trước khi chọn bàn.</Typography.Title>
           <Typography.Paragraph>
-            Xem món đang phục vụ, giá hiện tại và thông tin chi tiết được đồng bộ trực tiếp từ hệ thống.
+            Khám phá món đang phục vụ, mức giá hiện tại và chọn hương vị phù hợp cho bữa ăn của bạn.
           </Typography.Paragraph>
         </div>
       </section>

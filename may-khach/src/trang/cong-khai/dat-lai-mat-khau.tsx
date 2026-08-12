@@ -57,8 +57,17 @@ export function DatLaiMatKhau() {
             }
           }}
         >
-          <Form.Item name="token" label="Token đặt lại mật khẩu" rules={[{ required: true, min: 32 }]}>
-            <Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} />
+          {!tokenMacDinh ? (
+            <Alert
+              type="warning"
+              showIcon
+              message="Liên kết đặt lại mật khẩu không hợp lệ hoặc đã thiếu mã xác thực."
+              description="Hãy quay lại trang Quên mật khẩu và tạo một yêu cầu mới."
+              className="mb-16"
+            />
+          ) : null}
+          <Form.Item name="token" hidden rules={[{ required: true, min: 32 }]}>
+            <Input />
           </Form.Item>
           <Form.Item name="matKhauMoi" label="Mật khẩu mới" rules={[{ required: true }, { min: 8 }]}>
             <Input.Password prefix={<LockOutlined />} autoComplete="new-password" />
@@ -79,7 +88,7 @@ export function DatLaiMatKhau() {
           >
             <Input.Password prefix={<LockOutlined />} autoComplete="new-password" />
           </Form.Item>
-          <Button type="primary" htmlType="submit" block loading={tai}>Đặt lại mật khẩu</Button>
+          <Button type="primary" htmlType="submit" block loading={tai} disabled={!tokenMacDinh}>Đặt lại mật khẩu</Button>
         </Form>
       )}
 

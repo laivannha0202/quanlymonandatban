@@ -23,6 +23,8 @@ export const datBanApi = {
     goiApi<DatBan>('/dat-ban/tra-cuu', { method: 'POST', body: JSON.stringify({ maDatBan, soDienThoai }) }),
   cuaToi: (trang = 1, kichThuoc = 30) =>
     goiApi<DanhSachPhanTrang<DatBan>>(`/khach-hang/dat-ban${taoQuery({ trang, kichThuoc })}`, { xacThuc: true }),
+  chiTietCuaToi: (id: string) =>
+    goiApi<DatBan>(`/khach-hang/dat-ban/${id}`, { xacThuc: true }),
   huyCuaToi: (id: string, lyDo?: string) =>
     goiApi<DatBan>(`/khach-hang/dat-ban/${id}/huy`, { method: 'PATCH', xacThuc: true, body: JSON.stringify({ lyDo }) }),
 };

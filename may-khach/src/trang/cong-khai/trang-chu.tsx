@@ -67,6 +67,12 @@ const loiIch = [
 
 export function TrangChu() {
   const navigate = useNavigate();
+  const thongTinQuery = useQuery({
+    queryKey: ['cau-hinh-cong-khai'],
+    queryFn: heThongApi.thongTinNhaHangCongKhai,
+    staleTime: 5 * 60_000,
+  });
+  const tenNhaHang = thongTinQuery.data?.tenNhaHang || moiTruong.tenNhaHang;
   const monQuery = useQuery({
     queryKey: ['trang-chu', 'mon-noi-bat'],
     queryFn: () => thucDonApi.monAn({ trang: 1, kichThuoc: 6 }),
@@ -92,7 +98,7 @@ export function TrangChu() {
             </Typography.Title>
             <Typography.Paragraph>
               Khám phá thực đơn, chọn thời gian phù hợp và đặt bàn trong vài phút.
-              {` ${moiTruong.tenNhaHang}`} giúp bạn biết tình trạng phục vụ trước khi đến.
+              {` ${tenNhaHang}`} giúp bạn biết tình trạng phục vụ trước khi đến.
             </Typography.Paragraph>
             <Space size={12} wrap className="home-hero-actions">
               <Button
@@ -122,7 +128,7 @@ export function TrangChu() {
             <img src={hinhAnhMau.hero} alt="Bàn ăn với nhiều món hấp dẫn" />
             <div className="home-floating-card home-floating-top">
               <span className="home-floating-icon"><ClockCircleOutlined /></span>
-              <div><strong>10:00 – 22:00</strong><small>Phục vụ mỗi ngày</small></div>
+              <div><strong>Mở cửa theo lịch</strong><small>Khung giờ đồng bộ từ hệ thống</small></div>
             </div>
             <div className="home-floating-card home-floating-bottom">
               <span className="home-floating-icon"><CalendarOutlined /></span>

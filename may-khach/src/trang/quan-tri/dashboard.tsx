@@ -6,9 +6,7 @@ import {
   ReloadOutlined,
   TableOutlined,
   TeamOutlined,
-  UserAddOutlined,
 } from '@ant-design/icons';
-import { Pie } from '@ant-design/charts';
 import {
   Alert,
   Button,
@@ -20,7 +18,6 @@ import {
   Row,
   Skeleton,
   Space,
-  Statistic,
   Table,
   Tag,
   Typography,
@@ -35,14 +32,18 @@ import { TrangThai } from '@/thanh-phan/trang-thai';
 import { dinhDangNgayGio } from '@/cau-hinh/ngay-gio';
 import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 
-const tenTrangThai: Record<string, string> = {
-  CHO_XAC_NHAN: 'Chờ xác nhận',
-  DA_XAC_NHAN: 'Đã xác nhận',
-  DA_CHECK_IN: 'Đang phục vụ',
-  DA_HOAN_THANH: 'Hoàn thành',
-  DA_HUY: 'Đã hủy',
-  KHONG_DEN: 'Không đến',
-};
+function laDuLieuE2E(value?: string | null) {
+  return /\be2e\b/i.test(value || '');
+}
+
+function so(value: unknown) {
+  return Number(value || 0);
+}
+
+function TyLe({ value, total }: { value: number; total: number }) {
+  const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+  return <Progress percent={percent} showInfo={false} strokeWidth={8} />;
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ export function Dashboard() {
     query.error instanceof LoiApi
       ? query.error.message
       : query.error
-        ? 'Không tải được dashboard.'
+        ? 'Không tải được tổng quan vận hành.'
         : '';
 
   if (query.isPending) {
@@ -70,54 +71,64 @@ export function Dashboard() {
     );
   }
 
-  const tongDat = d?.datBan.tongDatBan ?? 0;
-  const daHoanThanh = d?.datBan.daHoanThanh ?? 0;
-  const tyLeHoanThanh = tongDat > 0 ? Math.round((daHoanThanh / tongDat) * 100) : 0;
+  const tongDat = so(d?.datBan.tongDatBan);
+  const choXacNhan = so(d?.datBan.choXacNhan);
+  const daXacNhan = so(d?.datBan.daXacNhan);
+  const dangPhucVu = so(d?.datBan.daCheckIn);
+  const daHoanThanh = so(d?.datBan.daHoanThanh);
+  const daHuy = so(d?.datBan.daHuy);
+  const khongDen = so(d?.datBan.khongDen);
+  const tongKhach = so(d?.datBan.tongKhach);
 
-  const trangThai = [
-    ['CHO_XAC_NHAN', d?.datBan.choXacNhan ?? 0],
-    ['DA_XAC_NHAN', d?.datBan.daXacNhan ?? 0],
-    ['DA_CHECK_IN', d?.datBan.daCheckIn ?? 0],
-    ['DA_HOAN_THANH', d?.datBan.daHoanThanh ?? 0],
-    ['DA_HUY', d?.datBan.daHuy ?? 0],
-    ['KHONG_DEN', d?.datBan.khongDen ?? 0],
-  ]
-    .map(([ma, value]) => ({
-      type: tenTrangThai[String(ma)],
-      value: Number(value),
-    }))
-    .filter((x) => x.value > 0);
+  const banTrong = so(d?.banAn.trong);
+  const banDangDung = so(d?.banAn.dangSuDung);
+  const banBaoTri = so(d?.banAn.baoTri);
+  const tongBanVanHanh = banTrong + banDangDung + banBaoTri;
+
+  const bayGio = dayjs();
+  const datBanGanToi = (d?.datBanGanToi || [])
+    .filter((item) => !laDuLieuE2E(item.hoTen) && !laDuLieuE2E(item.maDatBan))
+    .filter((item) => {
+      const batDau = dayjs(item.gioBatDau);
+      return batDau.isValid() && batDau.isAfter(bayGio);
+    })
+    .slice(0, 6);
+
+  const lichGanNhat = datBanGanToi[0];
+  const tyLeHoanThanh = tongDat > 0 ? Math.round((daHoanThanh / tongDat) * 100) : 0;
 
   const quickActions = [
     coQuyen('DAT_BAN_XEM')
-      ? { label: 'Quản lý đặt bàn', icon: <CalendarOutlined />, path: '/quan-tri/dat-ban' }
+      ? { label: 'Mở đặt bàn', icon: <CalendarOutlined />, path: '/quan-tri/dat-ban' }
       : null,
     coQuyen('BAN_AN_XEM')
-      ? { label: 'Xem bàn ăn', icon: <TableOutlined />, path: '/quan-tri/ban-an' }
+      ? { label: 'Xem sơ đồ bàn', icon: <TableOutlined />, path: '/quan-tri/ban-an' }
       : null,
     coQuyen('KHACH_HANG_XEM')
-      ? { label: 'Khách hàng', icon: <TeamOutlined />, path: '/quan-tri/khach-hang' }
+      ? { label: 'Tra khách hàng', icon: <TeamOutlined />, path: '/quan-tri/khach-hang' }
       : null,
     coQuyen('BAO_CAO_XEM')
-      ? { label: 'Xem báo cáo', icon: <ArrowRightOutlined />, path: '/quan-tri/bao-cao' }
+      ? { label: 'Báo cáo cuối ngày', icon: <ArrowRightOutlined />, path: '/quan-tri/bao-cao' }
       : null,
   ].filter(Boolean) as Array<{ label: string; icon: ReactNode; path: string }>;
 
   return (
-    <>
+    <div className="admin-dashboard-page">
       <Flex
         justify="space-between"
         align="flex-start"
         wrap
         gap={14}
-        className="admin-final-heading"
+        className="admin-final-heading admin-ops-heading"
       >
         <div>
-          <Typography.Text className="eyebrow">TỔNG QUAN VẬN HÀNH</Typography.Text>
-          <Typography.Title level={2}>Hôm nay tại nhà hàng</Typography.Title>
+          <Typography.Text className="eyebrow">CA VẬN HÀNH HÔM NAY</Typography.Text>
+          <Typography.Title level={2}>Những việc cần nắm ngay</Typography.Title>
           <Typography.Paragraph type="secondary">
-            {dayjs(d?.ngay).isValid() ? dayjs(d?.ngay).format('dddd, DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')}
-            {' · '}Dữ liệu đồng bộ trực tiếp từ hệ thống.
+            {dayjs(d?.ngay).isValid()
+              ? dayjs(d?.ngay).format('dddd, DD/MM/YYYY')
+              : dayjs().format('DD/MM/YYYY')}
+            {' · '}Ưu tiên xác nhận đặt bàn, khách sắp đến và tình trạng bàn.
           </Typography.Paragraph>
         </div>
 
@@ -130,174 +141,222 @@ export function Dashboard() {
         </Button>
       </Flex>
 
-      {loi && <Alert type="error" showIcon message={loi} className="mb-16" />}
+      {loi ? <Alert type="error" showIcon message={loi} /> : null}
 
       {d ? (
         <>
-          <Row gutter={[16, 16]} className="mb-24">
-            <Col xs={12} xl={6}>
-              <Card className="admin-kpi-card">
-                <span className="admin-kpi-icon"><CalendarOutlined /></span>
-                <Statistic title="Đặt bàn hôm nay" value={d.datBan.tongDatBan ?? 0} />
-                <Typography.Text type="secondary">{d.datBan.choXacNhan ?? 0} đang chờ xác nhận</Typography.Text>
-              </Card>
-            </Col>
-            <Col xs={12} xl={6}>
-              <Card className="admin-kpi-card">
-                <span className="admin-kpi-icon"><TeamOutlined /></span>
-                <Statistic title="Lượt khách" value={d.datBan.tongKhach ?? 0} />
-                <Typography.Text type="secondary">Tổng khách theo lịch hôm nay</Typography.Text>
-              </Card>
-            </Col>
-            <Col xs={12} xl={6}>
-              <Card className="admin-kpi-card">
-                <span className="admin-kpi-icon"><TableOutlined /></span>
-                <Statistic title="Bàn đang trống" value={d.banAn.trong ?? 0} />
-                <Typography.Text type="secondary">{d.banAn.dangSuDung ?? 0} bàn đang sử dụng</Typography.Text>
-              </Card>
-            </Col>
-            <Col xs={12} xl={6}>
-              <Card className="admin-kpi-card">
-                <span className="admin-kpi-icon"><UserAddOutlined /></span>
-                <Statistic title="Khách mới" value={d.khachHang.khachMoiHomNay ?? 0} />
-                <Typography.Text type="secondary">Tài khoản/khách mới hôm nay</Typography.Text>
-              </Card>
-            </Col>
-          </Row>
+          <section className="admin-ops-attention" aria-label="Việc cần xử lý">
+            <div className="admin-ops-section-heading">
+              <div>
+                <Typography.Text type="secondary">CẦN XỬ LÝ</Typography.Text>
+                <Typography.Title level={4}>Ưu tiên trong ca</Typography.Title>
+              </div>
+              {coQuyen('DAT_BAN_XEM') ? (
+                <Button type="link" onClick={() => navigate('/quan-tri/dat-ban')}>
+                  Mở danh sách đặt bàn <ArrowRightOutlined />
+                </Button>
+              ) : null}
+            </div>
 
-          <Row gutter={[16, 16]} className="mb-24">
-            <Col xs={24} xl={15}>
+            <Row gutter={[14, 14]} align="top">
+              <Col xs={24} md={8}>
+                <Card className={`admin-ops-focus-card ${choXacNhan > 0 ? 'is-urgent' : ''}`}>
+                  <div className="admin-ops-focus-top">
+                    <span className="admin-ops-focus-icon"><ClockCircleOutlined /></span>
+                    <Tag color={choXacNhan > 0 ? 'orange' : 'green'}>
+                      {choXacNhan > 0 ? 'Cần phản hồi' : 'Đã xử lý'}
+                    </Tag>
+                  </div>
+                  <strong className="admin-ops-focus-number">{choXacNhan}</strong>
+                  <span className="admin-ops-focus-label">đặt bàn chờ xác nhận</span>
+                  <Typography.Text type="secondary">
+                    {choXacNhan > 0
+                      ? 'Nên xác nhận sớm để khách chủ động lịch đến.'
+                      : 'Hiện không có yêu cầu nào đang chờ.'}
+                  </Typography.Text>
+                </Card>
+              </Col>
+
+              <Col xs={24} md={8}>
+                <Card className="admin-ops-focus-card">
+                  <div className="admin-ops-focus-top">
+                    <span className="admin-ops-focus-icon"><CalendarOutlined /></span>
+                    <Tag>{datBanGanToi.length} lịch</Tag>
+                  </div>
+                  <strong className="admin-ops-focus-number">
+                    {lichGanNhat ? dayjs(lichGanNhat.gioBatDau).format('HH:mm') : '—'}
+                  </strong>
+                  <span className="admin-ops-focus-label">lịch phục vụ gần nhất</span>
+                  <Typography.Text type="secondary">
+                    {lichGanNhat
+                      ? `${lichGanNhat.hoTen} · ${lichGanNhat.soNguoi} khách`
+                      : 'Chưa có lượt đặt bàn sắp tới.'}
+                  </Typography.Text>
+                </Card>
+              </Col>
+
+              <Col xs={24} md={8}>
+                <Card className="admin-ops-focus-card">
+                  <div className="admin-ops-focus-top">
+                    <span className="admin-ops-focus-icon"><TableOutlined /></span>
+                    <Tag color={banTrong > 0 ? 'green' : 'red'}>
+                      {banTrong > 0 ? 'Sẵn sàng' : 'Cần kiểm tra'}
+                    </Tag>
+                  </div>
+                  <strong className="admin-ops-focus-number">{banTrong}</strong>
+                  <span className="admin-ops-focus-label">bàn đang trống</span>
+                  <Typography.Text type="secondary">
+                    {banDangDung} bàn đang phục vụ
+                    {banBaoTri > 0 ? ` · ${banBaoTri} bảo trì` : ''}
+                  </Typography.Text>
+                </Card>
+              </Col>
+            </Row>
+          </section>
+
+          <Row gutter={[18, 18]} align="top" className="admin-ops-main-row">
+            <Col xs={24} xl={16}>
               <Card
-                title="Trạng thái đặt bàn"
-                extra={<Tag>{tongDat} lượt</Tag>}
-                className="admin-chart-card"
+                title="Lịch phục vụ sắp tới"
+                className="admin-ops-upcoming-card"
+                extra={
+                  coQuyen('DAT_BAN_XEM') ? (
+                    <Button type="link" onClick={() => navigate('/quan-tri/dat-ban')}>
+                      Xem tất cả <ArrowRightOutlined />
+                    </Button>
+                  ) : null
+                }
               >
-                {trangThai.length ? (
-                  <div className="admin-status-chart-grid">
-                    <div className="admin-chart-wrap">
-                      <Pie
-                        data={trangThai}
-                        angleField="value"
-                        colorField="type"
-                        innerRadius={0.66}
-                        height={300}
-                        legend={{ position: 'bottom' }}
-                        label={false}
-                        tooltip={{ title: 'type' }}
-                      />
-                      <div className="admin-chart-center">
-                        <strong>{tongDat}</strong>
-                        <span>Tổng đặt bàn</span>
-                      </div>
-                    </div>
-
-                    <div className="admin-status-list">
-                      {trangThai.map((item) => (
-                        <div className="admin-status-row" key={item.type}>
-                          <span>{item.type}</span>
-                          <strong>{item.value}</strong>
+                <Table
+                  rowKey="id"
+                  dataSource={datBanGanToi}
+                  pagination={false}
+                  size="middle"
+                  scroll={{ x: 760 }}
+                  locale={{ emptyText: 'Chưa có đặt bàn sắp tới' }}
+                  columns={[
+                    {
+                      title: 'Giờ',
+                      dataIndex: 'gioBatDau',
+                      width: 100,
+                      render: (v: string) => (
+                        <strong className="admin-ops-time">{dayjs(v).format('HH:mm')}</strong>
+                      ),
+                    },
+                    {
+                      title: 'Khách',
+                      dataIndex: 'hoTen',
+                      width: 210,
+                      render: (v: string, row) => (
+                        <div className="admin-ops-guest">
+                          <strong>{v}</strong>
+                          <span>{row.maDatBan}</span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có đặt bàn hôm nay" />
-                )}
+                      ),
+                    },
+                    {
+                      title: 'Số khách',
+                      dataIndex: 'soNguoi',
+                      width: 105,
+                      render: (v: number) => `${v} người`,
+                    },
+                    {
+                      title: 'Trạng thái',
+                      dataIndex: 'trangThai',
+                      width: 145,
+                      render: (v: string) => <TrangThai value={v} />,
+                    },
+                  ]}
+                />
               </Card>
             </Col>
 
-            <Col xs={24} xl={9}>
-              <Card title="Hiệu suất hôm nay" className="admin-performance-card">
-                <div className="admin-progress-wrap">
-                  <Progress
-                    type="dashboard"
-                    percent={tyLeHoanThanh}
-                    size={180}
-                    strokeWidth={10}
-                  />
+            <Col xs={24} xl={8}>
+              <Card title="Tình trạng bàn" className="admin-ops-table-card">
+                <div className="admin-ops-table-total">
+                  <div>
+                    <Typography.Text type="secondary">Bàn đang tham gia vận hành</Typography.Text>
+                    <strong>{tongBanVanHanh}</strong>
+                  </div>
+                  <TableOutlined />
                 </div>
-                <Typography.Title level={4}>{daHoanThanh}/{tongDat} lượt hoàn thành</Typography.Title>
-                <Typography.Paragraph type="secondary">
-                  Tỷ lệ phản ánh số lượt đã hoàn thành trên tổng đặt bàn hôm nay.
-                </Typography.Paragraph>
 
-                <div className="admin-mini-stats">
-                  <div>
-                    <span><CheckCircleOutlined /> Đã xác nhận</span>
-                    <strong>{d.datBan.daXacNhan ?? 0}</strong>
+                <div className="admin-ops-meter-list">
+                  <div className="admin-ops-meter">
+                    <div><span>Bàn trống</span><strong>{banTrong}</strong></div>
+                    <TyLe value={banTrong} total={tongBanVanHanh} />
                   </div>
-                  <div>
-                    <span><ClockCircleOutlined /> Đang phục vụ</span>
-                    <strong>{d.datBan.daCheckIn ?? 0}</strong>
+                  <div className="admin-ops-meter">
+                    <div><span>Đang phục vụ</span><strong>{banDangDung}</strong></div>
+                    <TyLe value={banDangDung} total={tongBanVanHanh} />
                   </div>
+                  {banBaoTri > 0 ? (
+                    <div className="admin-ops-meter">
+                      <div><span>Bảo trì</span><strong>{banBaoTri}</strong></div>
+                      <TyLe value={banBaoTri} total={tongBanVanHanh} />
+                    </div>
+                  ) : null}
                 </div>
+
+                {coQuyen('BAN_AN_XEM') ? (
+                  <Button block onClick={() => navigate('/quan-tri/ban-an')}>
+                    Mở quản lý bàn
+                  </Button>
+                ) : null}
               </Card>
             </Col>
           </Row>
 
-          {quickActions.length ? (
-            <Card title="Thao tác nhanh" className="admin-quick-card mb-24">
-              <Row gutter={[12, 12]}>
-                {quickActions.map((item) => (
-                  <Col xs={12} md={6} key={item.path}>
+          <Card title="Nhịp vận hành hôm nay" className="admin-ops-summary-card">
+            <div className="admin-ops-summary-grid">
+              <div>
+                <span>Đặt bàn</span>
+                <strong>{tongDat}</strong>
+                <small>{tongKhach} lượt khách</small>
+              </div>
+              <div>
+                <span>Đã xác nhận</span>
+                <strong>{daXacNhan}</strong>
+                <small>{dangPhucVu} đang phục vụ</small>
+              </div>
+              <div>
+                <span>Hoàn thành</span>
+                <strong>{daHoanThanh}</strong>
+                <small>{tyLeHoanThanh}% tổng lượt hôm nay</small>
+              </div>
+              <div>
+                <span>Hủy / không đến</span>
+                <strong>{daHuy + khongDen}</strong>
+                <small>{daHuy} hủy · {khongDen} không đến</small>
+              </div>
+              <div>
+                <span>Khách mới</span>
+                <strong>{so(d.khachHang.khachMoiHomNay)}</strong>
+                <small>Tài khoản hoặc hồ sơ mới</small>
+              </div>
+            </div>
+
+            {quickActions.length ? (
+              <div className="admin-ops-actions">
+                <span>Đi nhanh tới:</span>
+                <Space size={[8, 8]} wrap>
+                  {quickActions.map((item) => (
                     <Button
-                      block
-                      size="large"
+                      key={item.path}
                       icon={item.icon}
                       onClick={() => navigate(item.path)}
-                      className="admin-quick-button"
                     >
                       {item.label}
                     </Button>
-                  </Col>
-                ))}
-              </Row>
-            </Card>
-          ) : null}
-
-          <Card
-            title="Đặt bàn gần tới"
-            extra={
-              coQuyen('DAT_BAN_XEM') ? (
-                <Button type="link" onClick={() => navigate('/quan-tri/dat-ban')}>
-                  Xem tất cả <ArrowRightOutlined />
-                </Button>
-              ) : null
-            }
-            className="admin-upcoming-card"
-          >
-            <Table
-              rowKey="id"
-              dataSource={d.datBanGanToi || []}
-              pagination={false}
-              scroll={{ x: 820 }}
-              locale={{ emptyText: 'Chưa có đặt bàn sắp tới' }}
-              columns={[
-                { title: 'Mã', dataIndex: 'maDatBan', width: 170 },
-                { title: 'Khách', dataIndex: 'hoTen', width: 180 },
-                {
-                  title: 'Thời gian',
-                  dataIndex: 'gioBatDau',
-                  width: 180,
-                  render: (v: string) => dinhDangNgayGio(v),
-                },
-                {
-                  title: 'Số khách',
-                  dataIndex: 'soNguoi',
-                  width: 100,
-                  render: (v: number) => `${v} người`,
-                },
-                {
-                  title: 'Trạng thái',
-                  dataIndex: 'trangThai',
-                  width: 150,
-                  render: (v: string) => <TrangThai value={v} />,
-                },
-              ]}
-            />
+                  ))}
+                </Space>
+              </div>
+            ) : null}
           </Card>
         </>
-      ) : null}
-    </>
+      ) : (
+        <Empty description="Chưa có dữ liệu vận hành" />
+      )}
+    </div>
   );
 }

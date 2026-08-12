@@ -87,7 +87,7 @@ export class KhuyenMaiService {
         dto.loaiGiam,
         dto.giaTri,
         dto.giaTriDonToiThieu ?? null,
-        dto.giamToiDa ?? null,
+        dto.loaiGiam === 'PHAN_TRAM' ? (dto.giamToiDa ?? null) : null,
         new Date(dto.ngayBatDau),
         new Date(dto.ngayKetThuc),
         dto.soLuotToiDa ?? null,
@@ -137,7 +137,9 @@ export class KhuyenMaiService {
     if (dto.loaiGiam !== undefined) capNhat.push(['loai_giam', dto.loaiGiam]);
     if (dto.giaTri !== undefined) capNhat.push(['gia_tri', dto.giaTri]);
     if (dto.giaTriDonToiThieu !== undefined) capNhat.push(['gia_tri_don_toi_thieu', dto.giaTriDonToiThieu]);
-    if (dto.giamToiDa !== undefined) capNhat.push(['giam_toi_da', dto.giamToiDa]);
+    if (dto.loaiGiam === 'SO_TIEN') capNhat.push(['giam_toi_da', null]);
+    else if (dto.loaiGiam === 'SO_TIEN') capNhat.push(['giam_toi_da', null]);
+    else if (dto.giamToiDa !== undefined) capNhat.push(['giam_toi_da', dto.giamToiDa]);
     if (dto.ngayBatDau !== undefined) capNhat.push(['ngay_bat_dau', new Date(dto.ngayBatDau)]);
     if (dto.ngayKetThuc !== undefined) capNhat.push(['ngay_ket_thuc', new Date(dto.ngayKetThuc)]);
     if (dto.soLuotToiDa !== undefined) capNhat.push(['so_luot_toi_da', dto.soLuotToiDa]);

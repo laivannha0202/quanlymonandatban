@@ -1,0 +1,283 @@
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { PrismaService } from '../../co-so-du-lieu/prisma.service';
+import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
+import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
+import { NhatKyService } from '../nhat-ky/nhat-ky.service';
+import type { NguoiDungXacThuc } from '../../dung-chung/types/nguoi-dung-xac-thuc.type';
+import { CapNhatKhachHangDto } from './dto/cap-nhat-khach-hang.dto';
+import { CapNhatHoSoKhachHangDto } from './dto/cap-nhat-ho-so-khach-hang.dto';
+import { CapNhatTrangThaiKhachHangDto } from './dto/cap-nhat-trang-thai-khach-hang.dto';
+import { DanhSachKhachHangDto } from './dto/danh-sach-khach-hang.dto';
+
+interface TongSoDong { tong: bigint | number | string }
+
+@Injectable()
+export class KhachHangService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly nhatKy: NhatKyService,
+  ) {}
+
+
+  async hoSoCuaToi(taiKhoanIdChuoi: string) {
+    const rows = await this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
+      `SELECT kh.id, kh.ma_khach_hang, kh.ho_ten, kh.so_dien_thoai, kh.email,
+              DATE_FORMAT(kh.ngay_sinh, '%Y-%m-%d') AS ngay_sinh, kh.gioi_tinh,
+              kh.trang_thai, tk.ten_dang_nhap, tk.email AS email_tai_khoan, tk.lan_dang_nhap_cuoi
+       FROM khach_hang kh
+       INNER JOIN tai_khoan tk ON tk.id = kh.tai_khoan_id
+       WHERE kh.tai_khoan_id = ? AND kh.ngay_xoa IS NULL AND tk.ngay_xoa IS NULL
+       LIMIT 1`,
+      BigInt(taiKhoanIdChuoi),
+    );
+    if (!rows[0]) throw new LoiNghiepVuException('KHACH_HANG_001', 'Không tìm thấy hồ sơ khách hàng.', HttpStatus.NOT_FOUND);
+    return rows[0];
+  }
+
+  async capNhatHoSoCuaToi(taiKhoanIdChuoi: string, dto: CapNhatHoSoKhachHangDto) {
+    const cu = await this.hoSoCuaToi(taiKhoanIdChuoi);
+    const taiKhoanId = BigInt(taiKhoanIdChuoi);
+    const khachHangId = BigInt(String(cu.id));
+
+    if (dto.soDienThoai && dto.soDienThoai !== cu.so_dien_thoai) {
+      const trung = await this.prisma.$queryRawUnsafe<Array<{ id: bigint }>>(
+        'SELECT id FROM khach_hang WHERE so_dien_thoai = ? AND id <> ? AND ngay_xoa IS NULL LIMIT 1',
+        dto.soDienThoai,
+        khachHangId,
+      );
+      if (trung.length) throw new LoiNghiepVuException('KHACH_HANG_002', 'Số điện thoại đã được sử dụng.', HttpStatus.CONFLICT);
+    }
+
+    if (dto.email && dto.email !== cu.email_tai_khoan) {
+      const trung = await this.prisma.$queryRawUnsafe<Array<{ id: bigint }>>(
+        'SELECT id FROM tai_khoan WHERE email = ? AND id <> ? AND ngay_xoa IS NULL LIMIT 1',
+        dto.email,
+        taiKhoanId,
+      );
+      if (trung.length) throw new LoiNghiepVuException('KHACH_HANG_003', 'Email đã được tài khoản khác sử dụng.', HttpStatus.CONFLICT);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const kh: Array<[string, unknown]> = [];
+      if (dto.hoTen !== undefined) kh.push(['ho_ten', dto.hoTen]);
+      if (dto.soDienThoai !== undefined) kh.push(['so_dien_thoai', dto.soDienThoai]);
+      if (dto.email !== undefined) kh.push(['email', dto.email]);
+      if (dto.ngaySinh !== undefined) kh.push(['ngay_sinh', dto.ngaySinh]);
+      if (dto.gioiTinh !== undefined) kh.push(['gioi_tinh', dto.gioiTinh]);
+      if (kh.length) await tx.$executeRawUnsafe(`UPDATE khach_hang SET ${kh.map(([c]) => `${c} = ?`).join(', ')} WHERE id = ?`, ...kh.map(([,v]) => v), khachHangId);
+      if (dto.email !== undefined) await tx.$executeRawUnsafe('UPDATE tai_khoan SET email = ?, ten_dang_nhap = CASE WHEN ten_dang_nhap = ? THEN ? ELSE ten_dang_nhap END WHERE id = ?', dto.email, String(cu.email_tai_khoan), dto.email, taiKhoanId);
+    });
+    return this.hoSoCuaToi(taiKhoanIdChuoi);
+  }
+
+  async danhSach(dto: DanhSachKhachHangDto) {
+    const dieuKien: string[] = ['kh.ngay_xoa IS NULL'];
+    const thamSo: unknown[] = [];
+
+    if (dto.trangThai) {
+      dieuKien.push('kh.trang_thai = ?');
+      thamSo.push(dto.trangThai);
+    }
+    if (dto.tuKhoa?.trim()) {
+      const tuKhoa = `%${dto.tuKhoa.trim()}%`;
+      dieuKien.push('(kh.ho_ten LIKE ? OR kh.so_dien_thoai LIKE ? OR kh.email LIKE ? OR kh.ma_khach_hang LIKE ?)');
+      thamSo.push(tuKhoa, tuKhoa, tuKhoa, tuKhoa);
+    }
+
+    const where = dieuKien.join(' AND ');
+    const offset = (dto.trang - 1) * dto.kichThuoc;
+
+    const [duLieu, tongRows] = await Promise.all([
+      this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
+        `SELECT
+           kh.id, kh.ma_khach_hang, kh.tai_khoan_id, kh.ho_ten, kh.so_dien_thoai,
+           kh.email, DATE_FORMAT(kh.ngay_sinh, '%Y-%m-%d') AS ngay_sinh,
+           kh.gioi_tinh, kh.ghi_chu, kh.trang_thai, kh.ngay_tao, kh.ngay_cap_nhat,
+           COUNT(db.id) AS tong_dat_ban,
+           SUM(CASE WHEN db.trang_thai = 'DA_HOAN_THANH' THEN 1 ELSE 0 END) AS tong_hoan_thanh,
+           SUM(CASE WHEN db.trang_thai = 'DA_HUY' THEN 1 ELSE 0 END) AS tong_huy,
+           SUM(CASE WHEN db.trang_thai = 'KHONG_DEN' THEN 1 ELSE 0 END) AS tong_khong_den,
+           MAX(db.gio_bat_dau) AS lan_dat_gan_nhat
+         FROM khach_hang kh
+         LEFT JOIN dat_ban db ON db.khach_hang_id = kh.id
+         WHERE ${where}
+         GROUP BY kh.id
+         ORDER BY kh.ngay_tao DESC
+         LIMIT ? OFFSET ?`,
+        ...thamSo,
+        dto.kichThuoc,
+        offset,
+      ),
+      this.prisma.$queryRawUnsafe<TongSoDong[]>(
+        `SELECT COUNT(*) AS tong FROM khach_hang kh WHERE ${where}`,
+        ...thamSo,
+      ),
+    ]);
+
+    const tong = Number(tongRows[0]?.tong ?? 0);
+    return {
+      danhSach: duLieu.map((item) => this.chuanHoaThongKe(item)),
+      phanTrang: {
+        trang: dto.trang,
+        kichThuoc: dto.kichThuoc,
+        tong,
+        tongTrang: Math.ceil(tong / dto.kichThuoc),
+      },
+    };
+  }
+
+  async chiTiet(id: string) {
+    const khachHangId = bigintTuChuoi(id, 'ID khách hàng');
+    const rows = await this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
+      `SELECT
+         kh.id, kh.ma_khach_hang, kh.tai_khoan_id, kh.ho_ten, kh.so_dien_thoai,
+         kh.email, DATE_FORMAT(kh.ngay_sinh, '%Y-%m-%d') AS ngay_sinh,
+         kh.gioi_tinh, kh.ghi_chu, kh.trang_thai, kh.ngay_tao, kh.ngay_cap_nhat,
+         tk.ten_dang_nhap, tk.email AS email_tai_khoan, tk.lan_dang_nhap_cuoi,
+         COUNT(db.id) AS tong_dat_ban,
+         SUM(CASE WHEN db.trang_thai = 'DA_HOAN_THANH' THEN 1 ELSE 0 END) AS tong_hoan_thanh,
+         SUM(CASE WHEN db.trang_thai = 'DA_HUY' THEN 1 ELSE 0 END) AS tong_huy,
+         SUM(CASE WHEN db.trang_thai = 'KHONG_DEN' THEN 1 ELSE 0 END) AS tong_khong_den,
+         MAX(db.gio_bat_dau) AS lan_dat_gan_nhat
+       FROM khach_hang kh
+       LEFT JOIN tai_khoan tk ON tk.id = kh.tai_khoan_id
+       LEFT JOIN dat_ban db ON db.khach_hang_id = kh.id
+       WHERE kh.id = ? AND kh.ngay_xoa IS NULL
+       GROUP BY kh.id`,
+      khachHangId,
+    );
+
+    if (!rows[0]) {
+      throw new LoiNghiepVuException('KHACH_HANG_001', 'Không tìm thấy khách hàng.', HttpStatus.NOT_FOUND);
+    }
+    return this.chuanHoaThongKe(rows[0]);
+  }
+
+  async capNhat(id: string, dto: CapNhatKhachHangDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
+    const cu = await this.chiTiet(id);
+    const khachHangId = bigintTuChuoi(id, 'ID khách hàng');
+
+    if (dto.soDienThoai) {
+      const trung = await this.prisma.$queryRawUnsafe<Array<{ id: bigint }>>(
+        'SELECT id FROM khach_hang WHERE so_dien_thoai = ? AND id <> ? AND ngay_xoa IS NULL LIMIT 1',
+        dto.soDienThoai,
+        khachHangId,
+      );
+      if (trung.length) {
+        throw new LoiNghiepVuException('KHACH_HANG_002', 'Số điện thoại đã thuộc khách hàng khác.', HttpStatus.CONFLICT);
+      }
+    }
+
+    const taiKhoanId = cu.tai_khoan_id
+      ? BigInt(String(cu.tai_khoan_id))
+      : null;
+
+    if (
+      dto.email !== undefined &&
+      taiKhoanId &&
+      dto.email !== cu.email_tai_khoan
+    ) {
+      const trung = await this.prisma.$queryRawUnsafe<Array<{ id: bigint }>>(
+        'SELECT id FROM tai_khoan WHERE email = ? AND id <> ? AND ngay_xoa IS NULL LIMIT 1',
+        dto.email,
+        taiKhoanId,
+      );
+
+      if (trung.length) {
+        throw new LoiNghiepVuException(
+          'KHACH_HANG_003',
+          'Email đã được tài khoản khác sử dụng.',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
+    const capNhat: Array<[string, unknown]> = [];
+    if (dto.hoTen !== undefined) capNhat.push(['ho_ten', dto.hoTen]);
+    if (dto.soDienThoai !== undefined) capNhat.push(['so_dien_thoai', dto.soDienThoai]);
+    if (dto.email !== undefined) capNhat.push(['email', dto.email]);
+    if (dto.ngaySinh !== undefined) capNhat.push(['ngay_sinh', dto.ngaySinh]);
+    if (dto.gioiTinh !== undefined) capNhat.push(['gioi_tinh', dto.gioiTinh]);
+    if (dto.ghiChu !== undefined) capNhat.push(['ghi_chu', dto.ghiChu]);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (capNhat.length) {
+        const setSql = capNhat.map(([cot]) => `${cot} = ?`).join(', ');
+        await tx.$executeRawUnsafe(
+          `UPDATE khach_hang SET ${setSql} WHERE id = ? AND ngay_xoa IS NULL`,
+          ...capNhat.map(([, giaTri]) => giaTri),
+          khachHangId,
+        );
+      }
+
+      if (dto.email !== undefined && taiKhoanId) {
+        await tx.$executeRawUnsafe(
+          `UPDATE tai_khoan
+           SET email = ?,
+               ten_dang_nhap = CASE
+                 WHEN ten_dang_nhap = ? THEN ?
+                 ELSE ten_dang_nhap
+               END
+           WHERE id = ? AND ngay_xoa IS NULL`,
+          dto.email,
+          String(cu.email_tai_khoan ?? ''),
+          dto.email,
+          taiKhoanId,
+        );
+      }
+    });
+
+    const moi = await this.chiTiet(id);
+    await this.nhatKy.ghiNhan({
+      taiKhoanId: nguoiDung.taiKhoanId,
+      hanhDong: 'CAP_NHAT_KHACH_HANG',
+      doiTuong: 'KHACH_HANG',
+      doiTuongId: id,
+      duLieuCu: cu,
+      duLieuMoi: moi,
+      maYeuCau,
+    });
+    return moi;
+  }
+
+  async capNhatTrangThai(id: string, dto: CapNhatTrangThaiKhachHangDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
+    const cu = await this.chiTiet(id);
+    const khachHangId = bigintTuChuoi(id, 'ID khách hàng');
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(
+        'UPDATE khach_hang SET trang_thai = ? WHERE id = ? AND ngay_xoa IS NULL',
+        dto.trangThai,
+        khachHangId,
+      );
+      const taiKhoanId = cu.tai_khoan_id as string | bigint | null | undefined;
+      if (taiKhoanId) {
+        const trangThaiTaiKhoan = dto.trangThai === 'HOAT_DONG' ? 'HOAT_DONG' : dto.trangThai;
+        await tx.$executeRawUnsafe(
+          'UPDATE tai_khoan SET trang_thai = ? WHERE id = ? AND ngay_xoa IS NULL',
+          trangThaiTaiKhoan,
+          BigInt(String(taiKhoanId)),
+        );
+      }
+    });
+
+    const moi = await this.chiTiet(id);
+    await this.nhatKy.ghiNhan({
+      taiKhoanId: nguoiDung.taiKhoanId,
+      hanhDong: 'CAP_NHAT_TRANG_THAI_KHACH_HANG',
+      doiTuong: 'KHACH_HANG',
+      doiTuongId: id,
+      duLieuCu: cu,
+      duLieuMoi: moi,
+      maYeuCau,
+    });
+    return moi;
+  }
+
+  private chuanHoaThongKe(item: Record<string, unknown>): Record<string, unknown> {
+    const cacCotSo = ['tong_dat_ban', 'tong_hoan_thanh', 'tong_huy', 'tong_khong_den'];
+    const ketQua = { ...item };
+    for (const cot of cacCotSo) ketQua[cot] = Number(item[cot] ?? 0);
+    return ketQua;
+  }
+}

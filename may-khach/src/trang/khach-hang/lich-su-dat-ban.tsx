@@ -21,17 +21,23 @@ import { LoiApi } from '@/dich-vu/http';
 import type { DatBan } from '@/kieu/nghiep-vu';
 import { TrangThai } from '@/thanh-phan/trang-thai';
 import { khoaTruyVan } from '@/cau-hinh/khoa-truy-van';
-import { dinhDangNgay, dinhDangNgayGio } from '@/cau-hinh/ngay-gio';
+import { dinhDangGio, dinhDangNgay, dinhDangNgayGio } from '@/cau-hinh/ngay-gio';
 import { KhungTaiKhoan } from '@/thanh-phan/khung-tai-khoan';
 
 export function LichSuDatBan() {
   const { modal, message } = App.useApp();
   const queryClient = useQueryClient();
-  const [chiTiet, setChiTiet] = useState<DatBan | null>(null);
+  const [chiTietId, setChiTietId] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: khoaTruyVan.datBanCuaToi,
     queryFn: () => datBanApi.cuaToi(),
+  });
+
+  const chiTietQuery = useQuery({
+    queryKey: [...khoaTruyVan.datBanCuaToi, 'chi-tiet', chiTietId],
+    queryFn: () => datBanApi.chiTietCuaToi(chiTietId!),
+    enabled: Boolean(chiTietId),
   });
   const ds = query.data?.danhSach ?? [];
   const loi = query.error instanceof LoiApi ? query.error.message : query.error ? 'Không tải được lịch đặt.' : '';
@@ -40,7 +46,7 @@ export function LichSuDatBan() {
     mutationFn: (id: string) => datBanApi.huyCuaToi(id),
     onSuccess: async () => {
       message.success('Đã hủy đặt bàn');
-      setChiTiet(null);
+      setChiTietId(null);
       await queryClient.invalidateQueries({ queryKey: khoaTruyVan.datBanCuaToi });
     },
     onError: (e) => message.error(e instanceof LoiApi ? e.message : 'Không hủy được'),
@@ -85,7 +91,7 @@ export function LichSuDatBan() {
                 width: 180,
                 render: (_: unknown, r: DatBan) => (
                   <Space>
-                    <Button size="small" icon={<EyeOutlined />} onClick={() => setChiTiet(r)}>Chi tiết</Button>
+                    <Button size="small" icon={<EyeOutlined />} onClick={() => setChiTietId(r.id)}>Chi tiết</Button>
                     {['CHO_XAC_NHAN', 'DA_XAC_NHAN'].includes(r.trangThai) ? (
                       <Button
                         danger
@@ -107,29 +113,45 @@ export function LichSuDatBan() {
 
       <Drawer
         width={520}
-        open={Boolean(chiTiet)}
-        onClose={() => setChiTiet(null)}
-        title={chiTiet ? `Đặt bàn ${chiTiet.maDatBan}` : 'Chi tiết đặt bàn'}
+        open={Boolean(chiTietId)}
+        onClose={() => setChiTietId(null)}
+        title={chiTietQuery.data ? `Đặt bàn ${chiTietQuery.data.maDatBan}` : 'Chi tiết đặt bàn'}
       >
-        {chiTiet ? (
+        {chiTietQuery.isPending && chiTietId ? (
+          <Card loading bordered={false} />
+        ) : chiTietQuery.error ? (
+          <Alert
+            type="error"
+            showIcon
+            message={chiTietQuery.error instanceof LoiApi ? chiTietQuery.error.message : 'Không tải được chi tiết đặt bàn.'}
+          />
+        ) : chiTietQuery.data ? (
           <>
-            <Space className="mb-24"><TrangThai value={chiTiet.trangThai} /></Space>
+            <Space className="mb-24"><TrangThai value={chiTietQuery.data.trangThai} /></Space>
             <Descriptions
               bordered
               column={1}
               items={[
-                { key: 'ten', label: 'Khách hàng', children: chiTiet.hoTen },
-                { key: 'sdt', label: 'Số điện thoại', children: chiTiet.soDienThoai },
-                { key: 'email', label: 'Email', children: chiTiet.email || '—' },
-                { key: 'ngay', label: 'Ngày', children: dinhDangNgay(chiTiet.ngayDat) },
-                { key: 'gio', label: 'Giờ', children: dinhDangNgayGio(chiTiet.gioBatDau) },
-                { key: 'nguoi', label: 'Số người', children: `${chiTiet.soNguoi} khách` },
-                { key: 'ban', label: 'Bàn', children: chiTiet.banAns?.map((b) => b.tenBan || b.maBan).join(', ') || 'Hệ thống sẽ sắp' },
-                { key: 'ghiChu', label: 'Ghi chú', children: chiTiet.ghiChuKhach || '—' },
+                { key: 'ten', label: 'Khách hàng', children: chiTietQuery.data.hoTen || '—' },
+                { key: 'sdt', label: 'Số điện thoại', children: chiTietQuery.data.soDienThoai || '—' },
+                { key: 'email', label: 'Email', children: chiTietQuery.data.email || '—' },
+                { key: 'ngay', label: 'Ngày', children: dinhDangNgay(chiTietQuery.data.ngayDat) },
+                {
+                  key: 'gio',
+                  label: 'Giờ',
+                  children: `${dinhDangGio(chiTietQuery.data.gioBatDau)} – ${dinhDangGio(chiTietQuery.data.gioKetThuc)}`,
+                },
+                { key: 'nguoi', label: 'Số người', children: `${chiTietQuery.data.soNguoi} khách` },
+                {
+                  key: 'ban',
+                  label: 'Bàn',
+                  children: chiTietQuery.data.banAns?.map((b) => b.tenBan || b.maBan).join(', ') || 'Hệ thống sẽ sắp',
+                },
+                { key: 'ghiChu', label: 'Ghi chú', children: chiTietQuery.data.ghiChuKhach || '—' },
               ]}
             />
-            {['CHO_XAC_NHAN', 'DA_XAC_NHAN'].includes(chiTiet.trangThai) ? (
-              <Button danger block className="mt-16" onClick={() => huy(chiTiet)}>Hủy đặt bàn</Button>
+            {['CHO_XAC_NHAN', 'DA_XAC_NHAN'].includes(chiTietQuery.data.trangThai) ? (
+              <Button danger block className="mt-16" onClick={() => huy(chiTietQuery.data)}>Hủy đặt bàn</Button>
             ) : null}
           </>
         ) : null}
