@@ -40,3 +40,6 @@ may-chu/test/may-chu/
 
 # Runtime uploaded media
 may-chu/uploads/
+
+# Local patch backups
+**/*.bak_*
