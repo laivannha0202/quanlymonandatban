@@ -1,7 +1,14 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
-import { gioThanhPhut, laNgayHopLe } from '../../dung-chung/tien-ich/ngay-gio';
+import {
+  dateWallClockTuGio,
+  dateWallClockTuNgay,
+  gioThanhPhut,
+  gioTuDateWallClock,
+  laNgayHopLe,
+  ngayTuDateWallClock,
+} from '../../dung-chung/tien-ich/ngay-gio';
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
 import { CapNhatNgayDacBietDto } from './dto/cap-nhat-ngay-dac-biet.dto';
 import { TaoNgayDacBietDto } from './dto/tao-ngay-dac-biet.dto';
@@ -28,47 +35,31 @@ export class NgayDacBietService {
       throw new LoiNghiepVuException('NGAY_DAC_BIET_002', 'Đến ngày không hợp lệ.');
     }
 
-    const dieuKien: string[] = [];
-    const thamSo: unknown[] = [];
-    if (tuNgay) {
-      dieuKien.push('ngay >= ?');
-      thamSo.push(tuNgay);
-    }
-    if (denNgay) {
-      dieuKien.push('ngay <= ?');
-      thamSo.push(denNgay);
-    }
+    const ngayFilter = {
+      ...(tuNgay ? { gte: dateWallClockTuNgay(tuNgay) } : {}),
+      ...(denNgay ? { lte: dateWallClockTuNgay(denNgay) } : {}),
+    };
 
-    return this.prisma.$queryRawUnsafe<NgayDacBietView[]>(`
-      SELECT
-        id,
-        DATE_FORMAT(ngay, '%Y-%m-%d') AS ngay,
-        ten_su_kien,
-        dong_cua_ca_ngay,
-        IF(gio_mo_cua IS NULL, NULL, TIME_FORMAT(gio_mo_cua, '%H:%i')) AS gio_mo_cua,
-        IF(gio_dong_cua IS NULL, NULL, TIME_FORMAT(gio_dong_cua, '%H:%i')) AS gio_dong_cua,
-        ghi_chu
-      FROM ngay_nghi_dac_biet
-      ${dieuKien.length ? `WHERE ${dieuKien.join(' AND ')}` : ''}
-      ORDER BY ngay ASC
-    `, ...thamSo);
+    const rows = await this.prisma.ngay_nghi_dac_biet.findMany({
+      where:
+        tuNgay || denNgay
+          ? { ngay: ngayFilter }
+          : undefined,
+      orderBy: {
+        ngay: 'asc',
+      },
+    });
+
+    return rows.map((row) => this.toView(row));
   }
 
   async layTheoNgay(ngay: string): Promise<NgayDacBietView | null> {
-    const ketQua = await this.prisma.$queryRawUnsafe<NgayDacBietView[]>(`
-      SELECT
-        id,
-        DATE_FORMAT(ngay, '%Y-%m-%d') AS ngay,
-        ten_su_kien,
-        dong_cua_ca_ngay,
-        IF(gio_mo_cua IS NULL, NULL, TIME_FORMAT(gio_mo_cua, '%H:%i')) AS gio_mo_cua,
-        IF(gio_dong_cua IS NULL, NULL, TIME_FORMAT(gio_dong_cua, '%H:%i')) AS gio_dong_cua,
-        ghi_chu
-      FROM ngay_nghi_dac_biet
-      WHERE ngay = ?
-      LIMIT 1
-    `, ngay);
-    return ketQua[0] ?? null;
+    const row = await this.prisma.ngay_nghi_dac_biet.findUnique({
+      where: {
+        ngay: dateWallClockTuNgay(ngay),
+      },
+    });
+    return row ? this.toView(row) : null;
   }
 
   async tao(dto: TaoNgayDacBietDto) {
@@ -82,19 +73,22 @@ export class NgayDacBietService {
       );
     }
 
-    await this.prisma.$executeRawUnsafe(
-      `INSERT INTO ngay_nghi_dac_biet
-        (ngay, ten_su_kien, dong_cua_ca_ngay, gio_mo_cua, gio_dong_cua, ghi_chu)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      dto.ngay,
-      dto.tenSuKien,
-      dto.dongCuaCaNgay ? 1 : 0,
-      dto.dongCuaCaNgay ? null : `${dto.gioMoCua}:00`,
-      dto.dongCuaCaNgay ? null : `${dto.gioDongCua}:00`,
-      dto.ghiChu ?? null,
-    );
+    const row = await this.prisma.ngay_nghi_dac_biet.create({
+      data: {
+        ngay: dateWallClockTuNgay(dto.ngay),
+        ten_su_kien: dto.tenSuKien,
+        dong_cua_ca_ngay: dto.dongCuaCaNgay,
+        gio_mo_cua: dto.dongCuaCaNgay
+          ? null
+          : dateWallClockTuGio(dto.gioMoCua!),
+        gio_dong_cua: dto.dongCuaCaNgay
+          ? null
+          : dateWallClockTuGio(dto.gioDongCua!),
+        ghi_chu: dto.ghiChu ?? null,
+      },
+    });
 
-    return this.layTheoNgay(dto.ngay);
+    return this.toView(row);
   }
 
   async capNhat(id: string, dto: CapNhatNgayDacBietDto) {
@@ -103,19 +97,11 @@ export class NgayDacBietService {
       throw new LoiNghiepVuException('NGAY_DAC_BIET_004', 'Không tìm thấy ngày đặc biệt.', HttpStatus.NOT_FOUND);
     }
 
-    if (
-      dto.ngay &&
-      dto.ngay !== hienTai.ngay
-    ) {
-      const trungNgay =
-        await this.layTheoNgay(
-          dto.ngay,
-        );
-
+    if (dto.ngay && dto.ngay !== hienTai.ngay) {
+      const trungNgay = await this.layTheoNgay(dto.ngay);
       if (
         trungNgay &&
-        trungNgay.id.toString() !==
-          hienTai.id.toString()
+        trungNgay.id.toString() !== hienTai.id.toString()
       ) {
         throw new LoiNghiepVuException(
           'NGAY_DAC_BIET_003',
@@ -128,31 +114,33 @@ export class NgayDacBietService {
     const duLieu: TaoNgayDacBietDto = {
       ngay: dto.ngay ?? hienTai.ngay,
       tenSuKien: dto.tenSuKien ?? hienTai.ten_su_kien,
-      dongCuaCaNgay: dto.dongCuaCaNgay ?? Boolean(hienTai.dong_cua_ca_ngay),
+      dongCuaCaNgay:
+        dto.dongCuaCaNgay ?? Boolean(hienTai.dong_cua_ca_ngay),
       gioMoCua: dto.gioMoCua ?? hienTai.gio_mo_cua ?? undefined,
       gioDongCua: dto.gioDongCua ?? hienTai.gio_dong_cua ?? undefined,
       ghiChu: dto.ghiChu ?? hienTai.ghi_chu ?? undefined,
     };
     this.kiemTra(duLieu);
 
-    await this.prisma.$executeRawUnsafe(
-      `UPDATE ngay_nghi_dac_biet
-       SET ngay = ?, ten_su_kien = ?, dong_cua_ca_ngay = ?,
-           gio_mo_cua = ?, gio_dong_cua = ?, ghi_chu = ?
-       WHERE id = ?`,
-      duLieu.ngay,
-      duLieu.tenSuKien,
-      duLieu.dongCuaCaNgay ? 1 : 0,
-      duLieu.dongCuaCaNgay ? null : `${duLieu.gioMoCua}:00`,
-      duLieu.dongCuaCaNgay ? null : `${duLieu.gioDongCua}:00`,
-      duLieu.ghiChu ?? null,
-      bigintTuChuoi(
-        id,
-        'ID ngày đặc biệt',
-      ),
-    );
+    const row = await this.prisma.ngay_nghi_dac_biet.update({
+      where: {
+        id: bigintTuChuoi(id, 'ID ngày đặc biệt'),
+      },
+      data: {
+        ngay: dateWallClockTuNgay(duLieu.ngay),
+        ten_su_kien: duLieu.tenSuKien,
+        dong_cua_ca_ngay: duLieu.dongCuaCaNgay,
+        gio_mo_cua: duLieu.dongCuaCaNgay
+          ? null
+          : dateWallClockTuGio(duLieu.gioMoCua!),
+        gio_dong_cua: duLieu.dongCuaCaNgay
+          ? null
+          : dateWallClockTuGio(duLieu.gioDongCua!),
+        ghi_chu: duLieu.ghiChu ?? null,
+      },
+    });
 
-    return this.layTheoId(id);
+    return this.toView(row);
   }
 
   async xoa(id: string) {
@@ -172,19 +160,36 @@ export class NgayDacBietService {
   }
 
   private async layTheoId(id: string): Promise<NgayDacBietView | null> {
-    const ketQua = await this.prisma.$queryRawUnsafe<NgayDacBietView[]>(`
-      SELECT id, DATE_FORMAT(ngay, '%Y-%m-%d') AS ngay, ten_su_kien, dong_cua_ca_ngay,
-        IF(gio_mo_cua IS NULL, NULL, TIME_FORMAT(gio_mo_cua, '%H:%i')) AS gio_mo_cua,
-        IF(gio_dong_cua IS NULL, NULL, TIME_FORMAT(gio_dong_cua, '%H:%i')) AS gio_dong_cua,
-        ghi_chu
-      FROM ngay_nghi_dac_biet WHERE id = ? LIMIT 1
-    `,
-      bigintTuChuoi(
-        id,
-        'ID ngày đặc biệt',
-      ),
-    );
-    return ketQua[0] ?? null;
+    const row = await this.prisma.ngay_nghi_dac_biet.findUnique({
+      where: {
+        id: bigintTuChuoi(id, 'ID ngày đặc biệt'),
+      },
+    });
+    return row ? this.toView(row) : null;
+  }
+
+  private toView(row: {
+    id: bigint;
+    ngay: Date;
+    ten_su_kien: string;
+    dong_cua_ca_ngay: boolean;
+    gio_mo_cua: Date | null;
+    gio_dong_cua: Date | null;
+    ghi_chu: string | null;
+  }): NgayDacBietView {
+    return {
+      id: row.id,
+      ngay: ngayTuDateWallClock(row.ngay),
+      ten_su_kien: row.ten_su_kien,
+      dong_cua_ca_ngay: row.dong_cua_ca_ngay,
+      gio_mo_cua: row.gio_mo_cua
+        ? gioTuDateWallClock(row.gio_mo_cua)
+        : null,
+      gio_dong_cua: row.gio_dong_cua
+        ? gioTuDateWallClock(row.gio_dong_cua)
+        : null,
+      ghi_chu: row.ghi_chu,
+    };
   }
 
   private kiemTra(dto: TaoNgayDacBietDto): void {

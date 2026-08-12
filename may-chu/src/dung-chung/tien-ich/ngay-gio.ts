@@ -77,3 +77,26 @@ export function hienTaiWallClockVietNam(): Date {
     `${hienTaiVietNam.toISOString().slice(0, 23)}Z`,
   );
 }
+
+
+export function dateWallClockTuNgay(ngay: string): Date {
+  if (!laNgayHopLe(ngay)) {
+    throw new Error(`Ngày không hợp lệ: ${ngay}`);
+  }
+  return new Date(`${ngay}T00:00:00.000Z`);
+}
+
+export function ngayTuDateWallClock(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+export function dateWallClockTuGio(gio: string): Date {
+  if (!laGioHopLe(gio)) {
+    throw new Error(`Giờ không hợp lệ: ${gio}`);
+  }
+  return new Date(`1970-01-01T${gio}:00.000Z`);
+}
+
+export function gioTuDateWallClock(value: Date): string {
+  return value.toISOString().slice(11, 16);
+}

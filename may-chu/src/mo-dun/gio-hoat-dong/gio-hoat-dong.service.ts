@@ -1,7 +1,11 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
-import { gioThanhPhut } from '../../dung-chung/tien-ich/ngay-gio';
+import {
+  dateWallClockTuGio,
+  gioThanhPhut,
+  gioTuDateWallClock,
+} from '../../dung-chung/tien-ich/ngay-gio';
 import { CapNhatGioHoatDongDto } from './dto/cap-nhat-gio-hoat-dong.dto';
 
 export interface KhoangGioHoatDong {
@@ -19,34 +23,26 @@ export class GioHoatDongService {
   constructor(private readonly prisma: PrismaService) {}
 
   async danhSach(): Promise<KhoangGioHoatDong[]> {
-    return this.prisma.$queryRawUnsafe<KhoangGioHoatDong[]>(`
-      SELECT
-        id,
-        thu_trong_tuan,
-        ca_so,
-        TIME_FORMAT(gio_mo_cua, '%H:%i') AS gio_mo_cua,
-        TIME_FORMAT(gio_dong_cua, '%H:%i') AS gio_dong_cua,
-        hoat_dong,
-        ghi_chu
-      FROM gio_hoat_dong
-      ORDER BY thu_trong_tuan ASC, ca_so ASC
-    `);
+    const rows = await this.prisma.gio_hoat_dong.findMany({
+      orderBy: [
+        { thu_trong_tuan: 'asc' },
+        { ca_so: 'asc' },
+      ],
+    });
+    return rows.map((row) => this.toView(row));
   }
 
   async layTheoThu(thu: number): Promise<KhoangGioHoatDong[]> {
-    return this.prisma.$queryRawUnsafe<KhoangGioHoatDong[]>(`
-      SELECT
-        id,
-        thu_trong_tuan,
-        ca_so,
-        TIME_FORMAT(gio_mo_cua, '%H:%i') AS gio_mo_cua,
-        TIME_FORMAT(gio_dong_cua, '%H:%i') AS gio_dong_cua,
-        hoat_dong,
-        ghi_chu
-      FROM gio_hoat_dong
-      WHERE thu_trong_tuan = ? AND hoat_dong = 1
-      ORDER BY ca_so ASC
-    `, thu);
+    const rows = await this.prisma.gio_hoat_dong.findMany({
+      where: {
+        thu_trong_tuan: thu,
+        hoat_dong: true,
+      },
+      orderBy: {
+        ca_so: 'asc',
+      },
+    });
+    return rows.map((row) => this.toView(row));
   }
 
   async capNhat(dto: CapNhatGioHoatDongDto) {
@@ -167,26 +163,51 @@ export class GioHoatDongService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const item of dto.danhSach) {
-        await tx.$executeRawUnsafe(
-          `INSERT INTO gio_hoat_dong
-            (thu_trong_tuan, ca_so, gio_mo_cua, gio_dong_cua, hoat_dong, ghi_chu)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-             gio_mo_cua = VALUES(gio_mo_cua),
-             gio_dong_cua = VALUES(gio_dong_cua),
-             hoat_dong = VALUES(hoat_dong),
-             ghi_chu = VALUES(ghi_chu)`,
-          item.thuTrongTuan,
-          item.caSo,
-          `${item.gioMoCua}:00`,
-          `${item.gioDongCua}:00`,
-          item.hoatDong === false ? 0 : 1,
-          item.ghiChu ?? null,
-        );
+        const duLieu = {
+          gio_mo_cua: dateWallClockTuGio(item.gioMoCua),
+          gio_dong_cua: dateWallClockTuGio(item.gioDongCua),
+          hoat_dong: item.hoatDong !== false,
+          ghi_chu: item.ghiChu ?? null,
+        };
+
+        await tx.gio_hoat_dong.upsert({
+          where: {
+            thu_trong_tuan_ca_so: {
+              thu_trong_tuan: item.thuTrongTuan,
+              ca_so: item.caSo,
+            },
+          },
+          create: {
+            thu_trong_tuan: item.thuTrongTuan,
+            ca_so: item.caSo,
+            ...duLieu,
+          },
+          update: duLieu,
+        });
       }
     });
 
     return this.danhSach();
+  }
+
+  private toView(row: {
+    id: bigint;
+    thu_trong_tuan: number;
+    ca_so: number;
+    gio_mo_cua: Date;
+    gio_dong_cua: Date;
+    hoat_dong: boolean;
+    ghi_chu: string | null;
+  }): KhoangGioHoatDong {
+    return {
+      id: row.id,
+      thu_trong_tuan: row.thu_trong_tuan,
+      ca_so: row.ca_so,
+      gio_mo_cua: gioTuDateWallClock(row.gio_mo_cua),
+      gio_dong_cua: gioTuDateWallClock(row.gio_dong_cua),
+      hoat_dong: row.hoat_dong,
+      ghi_chu: row.ghi_chu,
+    };
   }
 
   async xoa(thu: number, caSo: number) {
