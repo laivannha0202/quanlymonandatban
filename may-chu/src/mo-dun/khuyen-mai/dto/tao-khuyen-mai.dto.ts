@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class TaoKhuyenMaiDto {
   @ApiProperty()
@@ -42,17 +42,15 @@ export class TaoKhuyenMaiDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
+  @Min(0.01)
   giamToiDa?: number;
 
   @ApiProperty({ example: '2026-08-10T00:00:00+07:00' })
-  @IsString()
-  @IsNotEmpty()
+  @IsDateString()
   ngayBatDau!: string;
 
   @ApiProperty({ example: '2026-08-31T23:59:59+07:00' })
-  @IsString()
-  @IsNotEmpty()
+  @IsDateString()
   ngayKetThuc!: string;
 
   @ApiPropertyOptional()
