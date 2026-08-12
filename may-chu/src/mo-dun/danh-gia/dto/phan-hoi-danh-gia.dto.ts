@@ -1,8 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+
 export class PhanHoiDanhGiaDto {
   @ApiProperty()
+  @Transform(({ value }) =>
+    typeof value === 'string'
+      ? value.trim()
+      : value,
+  )
   @IsString()
+  @IsNotEmpty()
   @MaxLength(5000)
   phanHoi!: string;
 }
