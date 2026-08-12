@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Prisma } from '../../../generated/prisma/client';
+import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
@@ -79,12 +79,11 @@ export class DatBanRepository {
       );
     }
 
-    const placeholders =
-      ids.map(() => '?').join(', ');
-
     // Raw SQL có chủ đích: cần khóa chính các hàng bàn
     // trong transaction để chống hai request giữ cùng bàn.
-    const banRaw = await tx.$queryRawUnsafe<
+    // Prisma.sql/Prisma.join bind toàn bộ ID, không nối giá trị
+    // người dùng trực tiếp vào chuỗi SQL.
+    const banRaw = await tx.$queryRaw<
       Array<{
         id: bigint;
         ma_ban: string;
@@ -94,19 +93,18 @@ export class DatBanRepository {
         suc_chua_toi_da: number | bigint;
         trang_thai: string;
       }>
-    >(
-      `SELECT ba.id, ba.ma_ban, ba.ten_ban, ba.khu_vuc_id,
-              ba.suc_chua, ba.suc_chua_toi_da, ba.trang_thai
-       FROM ban_an ba
-       INNER JOIN khu_vuc kv ON kv.id = ba.khu_vuc_id
-       WHERE ba.id IN (${placeholders})
-         AND ba.ngay_xoa IS NULL
-         AND kv.ngay_xoa IS NULL
-         AND kv.trang_thai = 'HOAT_DONG'
-       ORDER BY ba.id
-       FOR UPDATE`,
-      ...ids,
-    );
+    >(Prisma.sql`
+      SELECT ba.id, ba.ma_ban, ba.ten_ban, ba.khu_vuc_id,
+             ba.suc_chua, ba.suc_chua_toi_da, ba.trang_thai
+      FROM ban_an ba
+      INNER JOIN khu_vuc kv ON kv.id = ba.khu_vuc_id
+      WHERE ba.id IN (${Prisma.join(ids)})
+        AND ba.ngay_xoa IS NULL
+        AND kv.ngay_xoa IS NULL
+        AND kv.trang_thai = 'HOAT_DONG'
+      ORDER BY ba.id
+      FOR UPDATE
+    `);
 
     const ban: BanBiKhoa[] = banRaw.map(
       (item) => ({
@@ -189,41 +187,35 @@ export class DatBanRepository {
       );
     }
 
-    const loaiTru =
-      loaiTruDatBanId ? 'AND db.id <> ?' : '';
-    const thamSoLoaiTru =
+    const dieuKienLoaiTru =
       loaiTruDatBanId
-        ? [loaiTruDatBanId]
-        : [];
+        ? Prisma.sql`AND db.id <> ${loaiTruDatBanId}`
+        : Prisma.sql``;
 
     // Raw SQL có chủ đích: kiểm tra overlap và khóa
     // booking cạnh tranh trong cùng transaction.
-    const trung = await tx.$queryRawUnsafe<
+    const trung = await tx.$queryRaw<
       Array<{
         id: bigint;
         ma_dat_ban: string;
         ban_an_id: bigint;
       }>
-    >(
-      `SELECT db.id, db.ma_dat_ban, ctdb.ban_an_id
-       FROM chi_tiet_dat_ban ctdb
-       INNER JOIN dat_ban db
-         ON db.id = ctdb.dat_ban_id
-       WHERE ctdb.ban_an_id IN (${placeholders})
-         AND db.trang_thai IN (
-           'CHO_XAC_NHAN',
-           'DA_XAC_NHAN',
-           'DA_CHECK_IN'
-         )
-         AND db.gio_bat_dau < ?
-         AND db.gio_ket_thuc > ?
-         ${loaiTru}
-       LIMIT 1 FOR UPDATE`,
-      ...ids,
-      gioKetThucSql,
-      gioBatDauSql,
-      ...thamSoLoaiTru,
-    );
+    >(Prisma.sql`
+      SELECT db.id, db.ma_dat_ban, ctdb.ban_an_id
+      FROM chi_tiet_dat_ban ctdb
+      INNER JOIN dat_ban db
+        ON db.id = ctdb.dat_ban_id
+      WHERE ctdb.ban_an_id IN (${Prisma.join(ids)})
+        AND db.trang_thai IN (
+          'CHO_XAC_NHAN',
+          'DA_XAC_NHAN',
+          'DA_CHECK_IN'
+        )
+        AND db.gio_bat_dau < ${gioKetThucSql}
+        AND db.gio_ket_thuc > ${gioBatDauSql}
+        ${dieuKienLoaiTru}
+      LIMIT 1 FOR UPDATE
+    `);
 
     if (trung.length) {
       throw new LoiNghiepVuException(
@@ -248,29 +240,30 @@ export class DatBanRepository {
   ): Promise<DatBanCoBan | null> {
     // Raw SQL có chủ đích: workflow trạng thái cần row lock.
     const rows =
-      await tx.$queryRawUnsafe<DatBanCoBan[]>(
-        `SELECT db.id, db.ma_dat_ban, db.khach_hang_id,
-                db.khu_vuc_id, db.ho_ten, db.so_dien_thoai,
-                db.email,
-                DATE_FORMAT(
-                  db.ngay_dat, '%Y-%m-%d'
-                ) AS ngay_dat,
-                DATE_FORMAT(
-                  db.gio_bat_dau,
-                  '%Y-%m-%d %H:%i:%s'
-                ) AS gio_bat_dau,
-                DATE_FORMAT(
-                  db.gio_ket_thuc,
-                  '%Y-%m-%d %H:%i:%s'
-                ) AS gio_ket_thuc,
-                db.so_nguoi, db.trang_thai, db.nguon_dat,
-                db.kieu_xep_ban, db.ghi_chu_khach,
-                db.ghi_chu_noi_bo
-         FROM dat_ban db
-         WHERE db.id = ?
-         LIMIT 1
-         FOR UPDATE`,
-        id,
+      await tx.$queryRaw<DatBanCoBan[]>(
+        Prisma.sql`
+          SELECT db.id, db.ma_dat_ban, db.khach_hang_id,
+                 db.khu_vuc_id, db.ho_ten, db.so_dien_thoai,
+                 db.email,
+                 DATE_FORMAT(
+                   db.ngay_dat, '%Y-%m-%d'
+                 ) AS ngay_dat,
+                 DATE_FORMAT(
+                   db.gio_bat_dau,
+                   '%Y-%m-%d %H:%i:%s'
+                 ) AS gio_bat_dau,
+                 DATE_FORMAT(
+                   db.gio_ket_thuc,
+                   '%Y-%m-%d %H:%i:%s'
+                 ) AS gio_ket_thuc,
+                 db.so_nguoi, db.trang_thai, db.nguon_dat,
+                 db.kieu_xep_ban, db.ghi_chu_khach,
+                 db.ghi_chu_noi_bo
+          FROM dat_ban db
+          WHERE db.id = ${id}
+          LIMIT 1
+          FOR UPDATE
+        `,
       );
 
     return rows[0] ?? null;

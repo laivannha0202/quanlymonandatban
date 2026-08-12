@@ -3,7 +3,7 @@ import { DatBanRepository } from './dat-ban.repository';
 describe('DatBanRepository - chống trùng lịch', () => {
   it('trả DAT_BAN_002 khi bàn đã có booking giao nhau', async () => {
     const tx = {
-      $queryRawUnsafe: jest
+      $queryRaw: jest
         .fn()
         .mockResolvedValueOnce([
           {
