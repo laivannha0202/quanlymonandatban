@@ -8,6 +8,7 @@ import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { CanhBaoLoi } from '@/thanh-phan/canh-bao-loi';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
 import { TrangThai } from '@/thanh-phan/trang-thai';
+import type { TrangThaiHoatDong } from '@/kieu/trang-thai';
 
 type FormData = KhuVucPayload;
 
@@ -37,7 +38,7 @@ export function QuanTriKhuVuc() {
   const [dangSua, setDangSua] = useState<KhuVucQuanTri | null>(null);
   const [moForm, setMoForm] = useState(false);
   const [tuKhoa, setTuKhoa] = useState('');
-  const [trangThai, setTrangThai] = useState<string>('HOAT_DONG');
+  const [trangThai, setTrangThai] = useState<TrangThaiHoatDong | undefined>('HOAT_DONG');
   const hinhAnhDangNhap = Form.useWatch('hinhAnh', form);
 
   const query = useQuery({

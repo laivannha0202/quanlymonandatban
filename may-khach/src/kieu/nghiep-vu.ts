@@ -1,3 +1,11 @@
+import type {
+  NguonDatBan,
+  TrangThaiBanAn,
+  TrangThaiDatBan,
+  TrangThaiHoatDong,
+  TrangThaiTaiKhoan,
+} from './trang-thai';
+
 export interface BoToken {
   accessToken: string;
   loaiToken: string;
@@ -8,7 +16,7 @@ export interface NguoiDungHienTai {
   id: string;
   tenDangNhap: string;
   email: string | null;
-  trangThai: string;
+  trangThai: TrangThaiTaiKhoan;
   batBuocDoiMatKhau: boolean;
   lanDangNhapCuoi: string | null;
   vaiTro: { id: string; maVaiTro: string };
@@ -49,7 +57,7 @@ export interface MonAn {
   hinhAnhChinh?: string | null;
   laMonNoiBat?: boolean;
   conMon?: boolean;
-  trangThai?: string;
+  trangThai?: TrangThaiHoatDong;
   ngayTao?: string;
   ngayCapNhat?: string;
   hinhAnh?: HinhAnhMon[];
@@ -65,7 +73,7 @@ export interface BanAnPhuongAn {
     tenKhuVuc: string;
     sucChua: number;
     sucChuaToiDa: number;
-    trangThai: string;
+    trangThai: TrangThaiBanAn;
   }>;
   tongSucChua: number;
   tongSucChuaToiDa: number;
@@ -91,14 +99,14 @@ export interface DatBan {
   gioBatDau: string;
   gioKetThuc: string;
   soNguoi: number;
-  trangThai: string;
-  nguonDat?: string;
+  trangThai: TrangThaiDatBan;
+  nguonDat?: NguonDatBan;
   ghiChuKhach?: string | null;
   banAns?: Array<{ id: string; maBan: string; tenBan?: string; tenKhuVuc?: string }>;
   lichSu?: Array<{
     id: string;
-    trangThaiCu: string | null;
-    trangThaiMoi: string;
+    trangThaiCu: TrangThaiDatBan | null;
+    trangThaiMoi: TrangThaiDatBan;
     hanhDong: string;
     thoiGian: string;
   }>;

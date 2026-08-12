@@ -1,6 +1,14 @@
 import { goiApi, taoQuery } from './http';
 import type { DanhSachPhanTrang } from '@/kieu/api';
 import type { DatBan, MonAn } from '@/kieu/nghiep-vu';
+import type {
+  NguonDatBan,
+  TrangThaiBanAn,
+  TrangThaiHoatDong,
+  TrangThaiKhachHang,
+  TrangThaiNhanVien,
+  TrangThaiTaiKhoan,
+} from '@/kieu/trang-thai';
 
 export interface DashboardData {
   ngay: string;
@@ -28,7 +36,7 @@ export interface KhuVucQuanTri {
   moTa?: string | null;
   hinhAnh?: string | null;
   thuTu: number;
-  trangThai: string;
+  trangThai: TrangThaiHoatDong;
 }
 
 export interface BanAnQuanTri {
@@ -41,7 +49,7 @@ export interface BanAnQuanTri {
   sucChuaToiDa: number;
   viTriX?: number | null;
   viTriY?: number | null;
-  trangThai: string;
+  trangThai: TrangThaiBanAn;
   ghiChu?: string | null;
 }
 
@@ -63,7 +71,7 @@ export interface KhachHangQuanTri {
   ngaySinh?: string | null;
   gioiTinh?: 'NAM' | 'NU' | 'KHAC' | null;
   ghiChu?: string | null;
-  trangThai: 'HOAT_DONG' | 'BI_KHOA' | 'NGUNG_HOAT_DONG';
+  trangThai: TrangThaiKhachHang;
   tongDatBan?: number;
   tongHoanThanh?: number;
   tongHuy?: number;
@@ -83,13 +91,13 @@ export interface NhanVienQuanTri {
   email?: string | null;
   ngayVaoLam?: string | null;
   ghiChu?: string | null;
-  trangThai: 'HOAT_DONG' | 'TAM_NGHI' | 'DA_NGHI';
+  trangThai: TrangThaiNhanVien;
   vaiTroId: string;
   maVaiTro: string;
   tenVaiTro: string;
   tenDangNhap?: string | null;
   emailTaiKhoan?: string | null;
-  trangThaiTaiKhoan?: string;
+  trangThaiTaiKhoan?: TrangThaiTaiKhoan;
   batBuocDoiMatKhau?: boolean;
   lanDangNhapCuoi?: string | null;
 }
@@ -122,7 +130,7 @@ export type TaoDatBanQuanTriPayload = {
   gioBatDau: string;
   soNguoi: number;
   banAnIds: string[];
-  nguonDat?: 'DIEN_THOAI' | 'FACEBOOK' | 'TRUC_TIEP' | 'KHAC';
+  nguonDat?: Exclude<NguonDatBan, 'WEBSITE'>;
   xacNhanNgay?: boolean;
   ghiChu?: string;
   ghiChuNoiBo?: string;
@@ -134,7 +142,7 @@ export type KhuVucPayload = {
   moTa?: string;
   hinhAnh?: string;
   thuTu?: number;
-  trangThai?: string;
+  trangThai?: TrangThaiHoatDong;
 };
 
 export type BanAnPayload = {
@@ -145,7 +153,7 @@ export type BanAnPayload = {
   sucChuaToiDa: number;
   viTriX?: number;
   viTriY?: number;
-  trangThai?: string;
+  trangThai?: TrangThaiBanAn;
   ghiChu?: string;
 };
 
@@ -160,7 +168,7 @@ export type MonAnPayload = {
   hinhAnhChinh?: string;
   laMonNoiBat?: boolean;
   conMon?: boolean;
-  trangThai?: string;
+  trangThai?: TrangThaiHoatDong;
 };
 
 export type HinhAnhMonPayload = {
@@ -189,7 +197,7 @@ export type TaoNhanVienPayload = {
   soDienThoai?: string;
   ngayVaoLam?: string;
   ghiChu?: string;
-  trangThai?: 'HOAT_DONG' | 'TAM_NGHI' | 'DA_NGHI';
+  trangThai?: TrangThaiNhanVien;
 };
 
 export type CapNhatNhanVienPayload = {
@@ -239,7 +247,7 @@ export const quanTriApi = {
       method: 'PATCH', xacThuc: true, body: hanhDong === 'huy' ? JSON.stringify({}) : undefined,
     }),
 
-  khuVuc: (p: { tuKhoa?: string; trangThai?: string } = {}) =>
+  khuVuc: (p: { tuKhoa?: string; trangThai?: TrangThaiHoatDong } = {}) =>
     goiApi<KhuVucQuanTri[]>(`/quan-tri/khu-vuc${taoQuery(p)}`, { xacThuc: true }),
   taoKhuVuc: (duLieu: KhuVucPayload) =>
     goiApi<KhuVucQuanTri>('/quan-tri/khu-vuc', { method: 'POST', xacThuc: true, body: JSON.stringify(duLieu) }),

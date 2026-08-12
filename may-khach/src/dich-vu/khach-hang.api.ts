@@ -1,4 +1,5 @@
 import { goiApi } from './http';
+import type { TrangThaiKhachHang } from '@/kieu/trang-thai';
 
 export interface HoSoKhachHang {
   id: string;
@@ -9,7 +10,7 @@ export interface HoSoKhachHang {
   ngaySinh?: string | null;
   gioiTinh?: string | null;
   ghiChu?: string | null;
-  trangThai: string;
+  trangThai: TrangThaiKhachHang;
 }
 
 export const khachHangApi = {

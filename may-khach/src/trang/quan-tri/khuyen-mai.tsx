@@ -28,6 +28,7 @@ import { heThongApi, type KhuyenMai } from '@/dich-vu/he-thong.api';
 import { LoiApi } from '@/dich-vu/http';
 import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
+import type { TrangThaiHoatDong } from '@/kieu/trang-thai';
 
 type LoaiGiam = 'PHAN_TRAM' | 'SO_TIEN';
 type HieuLuc =
@@ -46,7 +47,7 @@ type FormData = {
   giamToiDa?: number;
   ngayBatDau: Dayjs;
   ngayKetThuc: Dayjs;
-  trangThai?: string;
+  trangThai?: TrangThaiHoatDong;
 };
 
 function boDau(value: string) {
@@ -121,7 +122,7 @@ export function QuanTriKhuyenMai() {
   const [maDaSuaTay, setMaDaSuaTay] = useState(false);
 
   const [tuKhoa, setTuKhoa] = useState('');
-  const [trangThaiLoc, setTrangThaiLoc] = useState<string>();
+  const [trangThaiLoc, setTrangThaiLoc] = useState<TrangThaiHoatDong>();
   const [hieuLucLoc, setHieuLucLoc] = useState<HieuLuc>();
 
   const taiLai = async () => {

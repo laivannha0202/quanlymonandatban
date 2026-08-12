@@ -1,5 +1,6 @@
 import { goiApi, taoQuery } from './http';
 import type { DanhSachPhanTrang } from '@/kieu/api';
+import type { TrangThaiHoatDong } from '@/kieu/trang-thai';
 
 export interface ThongTinNhaHangCongKhai {
   tenNhaHang: string;
@@ -15,7 +16,7 @@ export interface DanhMucQuanTri {
   duongDan: string;
   moTa?: string | null;
   thuTu: number;
-  trangThai: string;
+  trangThai: TrangThaiHoatDong;
   soMon?: number;
 }
 
@@ -30,7 +31,7 @@ export interface KhuyenMai {
   giamToiDa?: number | null;
   ngayBatDau: string;
   ngayKetThuc: string;
-  trangThai: string;
+  trangThai: TrangThaiHoatDong;
 }
 
 export interface DanhGia {
@@ -75,7 +76,7 @@ export interface VaiTro {
   maVaiTro: string;
   tenVaiTro: string;
   moTa?: string | null;
-  trangThai: string;
+  trangThai: TrangThaiHoatDong;
   quyen: Quyen[];
 }
 
@@ -109,7 +110,7 @@ type DanhMucPayload = {
   duongDan?: string;
   moTa?: string;
   thuTu?: number;
-  trangThai?: string;
+  trangThai?: TrangThaiHoatDong;
 };
 
 type KhuyenMaiPayload = {
@@ -122,7 +123,7 @@ type KhuyenMaiPayload = {
   giamToiDa?: number;
   ngayBatDau?: string;
   ngayKetThuc?: string;
-  trangThai?: string;
+  trangThai?: TrangThaiHoatDong;
 };
 
 export const heThongApi = {

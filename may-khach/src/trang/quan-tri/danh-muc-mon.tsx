@@ -25,6 +25,7 @@ import { LoiApi } from '@/dich-vu/http';
 import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { TrangThai } from '@/thanh-phan/trang-thai';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
+import type { TrangThaiHoatDong } from '@/kieu/trang-thai';
 
 type FormData = {
   maDanhMuc: string;
@@ -32,7 +33,7 @@ type FormData = {
   duongDan?: string;
   moTa?: string;
   thuTu?: number;
-  trangThai?: string;
+  trangThai?: TrangThaiHoatDong;
 };
 
 function boDau(value: string) {
@@ -73,7 +74,7 @@ export function QuanTriDanhMucMon() {
   const [dangSua, setDangSua] = useState<DanhMucQuanTri | null>(null);
   const [moForm, setMoForm] = useState(false);
   const [tuKhoa, setTuKhoa] = useState('');
-  const [trangThai, setTrangThai] = useState<string>('HOAT_DONG');
+  const [trangThai, setTrangThai] = useState<TrangThaiHoatDong | ''>('HOAT_DONG');
 
   const query = useQuery({
     queryKey: ['quan-tri', 'danh-muc-mon'],
