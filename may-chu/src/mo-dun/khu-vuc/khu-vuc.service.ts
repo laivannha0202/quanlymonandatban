@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
+import { hienTaiWallClockVietNam } from '../../dung-chung/tien-ich/ngay-gio';
 import { CapNhatKhuVucDto } from './dto/cap-nhat-khu-vuc.dto';
 import { TaoKhuVucDto } from './dto/tao-khu-vuc.dto';
 
@@ -72,11 +73,24 @@ export class KhuVucService {
 
   async capNhat(id: string, dto: CapNhatKhuVucDto) {
     const hienTai = await this.chiTiet(id);
-    if (dto.maKhuVuc && dto.maKhuVuc !== hienTai.ma_khu_vuc) {
-      const trung = await this.prisma.khu_vuc.findUnique({ where: { ma_khu_vuc: dto.maKhuVuc } });
-      if (trung) {
-        throw new LoiNghiepVuException('KHU_VUC_002', 'Mã khu vực đã tồn tại.', HttpStatus.CONFLICT);
-      }
+
+    if (
+      dto.maKhuVuc !== undefined &&
+      dto.maKhuVuc !== hienTai.ma_khu_vuc
+    ) {
+      throw new LoiNghiepVuException(
+        'KHU_VUC_004',
+        'Mã khu vực được cố định sau khi tạo và không thể thay đổi.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const dangNgungHoatDong =
+      dto.trangThai === 'NGUNG_HOAT_DONG' &&
+      hienTai.trang_thai !== 'NGUNG_HOAT_DONG';
+
+    if (dangNgungHoatDong) {
+      await this.kiemTraKhongConLichDatHieuLuc(hienTai.id);
     }
 
     return this.prisma.khu_vuc.update({
@@ -94,6 +108,9 @@ export class KhuVucService {
 
   async xoa(id: string) {
     const khuVuc = await this.chiTiet(id);
+
+    await this.kiemTraKhongConLichDatHieuLuc(khuVuc.id);
+
     const soBan = await this.prisma.ban_an.count({
       where: { khu_vuc_id: khuVuc.id, ngay_xoa: null },
     });
@@ -110,5 +127,29 @@ export class KhuVucService {
       data: { ngay_xoa: new Date(), trang_thai: 'NGUNG_HOAT_DONG' },
     });
     return { daXoa: true };
+  }
+
+  private async kiemTraKhongConLichDatHieuLuc(
+    khuVucId: bigint,
+  ): Promise<void> {
+    const soLichConHieuLuc = await this.prisma.dat_ban.count({
+      where: {
+        khu_vuc_id: khuVucId,
+        trang_thai: {
+          in: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN'],
+        },
+        gio_ket_thuc: {
+          gt: hienTaiWallClockVietNam(),
+        },
+      },
+    });
+
+    if (soLichConHieuLuc > 0) {
+      throw new LoiNghiepVuException(
+        'KHU_VUC_005',
+        'Khu vực đang có lịch đặt còn hiệu lực nên chưa thể ngừng hoạt động hoặc xóa.',
+        HttpStatus.CONFLICT,
+      );
+    }
   }
 }
