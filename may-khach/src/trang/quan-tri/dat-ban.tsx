@@ -43,7 +43,6 @@ type HanhDong = 'xac-nhan' | 'check-in' | 'hoan-thanh' | 'khong-den' | 'huy';
 
 type DatBanChiTietQuanTri = DatBan & {
   ghiChuNoiBo?: string | null;
-  ghi_chu_noi_bo?: string | null;
 };
 
 type TaoDatBanForm = {
@@ -89,12 +88,12 @@ function tenBan(r?: DatBan | null) {
 }
 
 function ghiChuNoiBo(r?: DatBanChiTietQuanTri | null) {
-  return r?.ghiChuNoiBo ?? r?.ghi_chu_noi_bo ?? null;
+  return r?.ghiChuNoiBo ?? null;
 }
 
 function tenPhuongAn(p: BanAnPhuongAn) {
   return p.banAns
-    .map((ban) => ban.tenBan || ban.ten_ban || ban.maBan || ban.ma_ban || ban.id)
+    .map((ban) => ban.tenBan || ban.maBan)
     .join(' + ');
 }
 

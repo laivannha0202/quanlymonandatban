@@ -59,13 +59,13 @@ export interface BanAnPhuongAn {
   kieu: 'BAN_DON' | 'GHEP_BAN';
   banAns: Array<{
     id: string;
-    maBan?: string;
-    ma_ban?: string;
-    tenBan?: string;
-    ten_ban?: string;
-    tenKhuVuc?: string;
-    sucChua?: number;
-    sucChuaToiDa?: number;
+    maBan: string;
+    tenBan: string;
+    khuVucId: string;
+    tenKhuVuc: string;
+    sucChua: number;
+    sucChuaToiDa: number;
+    trangThai: string;
   }>;
   tongSucChua: number;
   tongSucChuaToiDa: number;

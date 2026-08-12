@@ -38,7 +38,7 @@ type GiaTriForm = Omit<TaoDatBanPayload, 'banAnIds'>;
 
 function tenBan(p: BanAnPhuongAn): string {
   return p.banAns
-    .map((b) => b.tenBan || b.ten_ban || b.maBan || b.ma_ban || b.id)
+    .map((b) => b.tenBan || b.maBan)
     .join(' + ');
 }
 

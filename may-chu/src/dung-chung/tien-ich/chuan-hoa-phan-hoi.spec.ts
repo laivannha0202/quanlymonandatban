@@ -21,6 +21,52 @@ describe('chuanHoaPhanHoi', () => {
     });
   });
 
+  it('chuẩn hóa sâu phương án bàn thành contract camelCase cho frontend', () => {
+    expect(
+      chuanHoaPhanHoi({
+        phuong_an: [
+          {
+            kieu: 'BAN_DON',
+            ban_ans: [
+              {
+                id: 5n,
+                ma_ban: 'B05',
+                ten_ban: 'Bàn 05',
+                khu_vuc_id: 2n,
+                ten_khu_vuc: 'Trong nhà',
+                suc_chua: 2,
+                suc_chua_toi_da: 4,
+                trang_thai: 'TRONG',
+              },
+            ],
+            tong_suc_chua: 2,
+            tong_suc_chua_toi_da: 4,
+          },
+        ],
+      }),
+    ).toEqual({
+      phuongAn: [
+        {
+          kieu: 'BAN_DON',
+          banAns: [
+            {
+              id: '5',
+              maBan: 'B05',
+              tenBan: 'Bàn 05',
+              khuVucId: '2',
+              tenKhuVuc: 'Trong nhà',
+              sucChua: 2,
+              sucChuaToiDa: 4,
+              trangThai: 'TRONG',
+            },
+          ],
+          tongSucChua: 2,
+          tongSucChuaToiDa: 4,
+        },
+      ],
+    });
+  });
+
   it('không biến số điện thoại hoặc ID chuỗi thành number', () => {
     expect(chuanHoaPhanHoi({ tai_khoan_id: 99n, so_dien_thoai: '0900123456' })).toEqual({
       taiKhoanId: '99',
