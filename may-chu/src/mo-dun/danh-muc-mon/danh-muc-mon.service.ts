@@ -10,125 +10,267 @@ import { TaoDanhMucMonDto } from './dto/tao-danh-muc-mon.dto';
 
 @Injectable()
 export class DanhMucMonService {
-  constructor(private readonly prisma: PrismaService, private readonly nhatKy: NhatKyService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly nhatKy: NhatKyService,
+  ) {}
 
   async danhSachCongKhai() {
-    const rows = await this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-      `SELECT dm.id, dm.ma_danh_muc, dm.ten_danh_muc, dm.duong_dan, dm.mo_ta, dm.hinh_anh, dm.thu_tu,
-              COUNT(ma.id) AS so_mon
-       FROM danh_muc_mon dm
-       LEFT JOIN mon_an ma ON ma.danh_muc_id = dm.id AND ma.ngay_xoa IS NULL AND ma.trang_thai = 'HOAT_DONG'
-       WHERE dm.ngay_xoa IS NULL AND dm.trang_thai = 'HOAT_DONG'
-       GROUP BY dm.id
-       ORDER BY dm.thu_tu, dm.ten_danh_muc`,
-    );
-    return rows.map((row) => ({ ...row, so_mon: Number(row.so_mon ?? 0) }));
+    const rows = await this.prisma.danh_muc_mon.findMany({
+      where: {
+        ngay_xoa: null,
+        trang_thai: 'HOAT_DONG',
+      },
+      orderBy: [
+        { thu_tu: 'asc' },
+        { ten_danh_muc: 'asc' },
+      ],
+      include: {
+        _count: {
+          select: {
+            mon_an: {
+              where: {
+                ngay_xoa: null,
+                trang_thai: 'HOAT_DONG',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return rows.map(({ _count, ...row }) => ({
+      ...row,
+      so_mon: _count.mon_an,
+    }));
   }
 
   async danhSachQuanTri() {
-    const rows = await this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-      `SELECT dm.*, COUNT(ma.id) AS so_mon
-       FROM danh_muc_mon dm
-       LEFT JOIN mon_an ma ON ma.danh_muc_id = dm.id AND ma.ngay_xoa IS NULL
-       WHERE dm.ngay_xoa IS NULL
-       GROUP BY dm.id
-       ORDER BY dm.thu_tu, dm.ten_danh_muc`,
-    );
-    return rows.map((row) => ({ ...row, so_mon: Number(row.so_mon ?? 0) }));
+    const rows = await this.prisma.danh_muc_mon.findMany({
+      where: {
+        ngay_xoa: null,
+      },
+      orderBy: [
+        { thu_tu: 'asc' },
+        { ten_danh_muc: 'asc' },
+      ],
+      include: {
+        _count: {
+          select: {
+            mon_an: {
+              where: {
+                ngay_xoa: null,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return rows.map(({ _count, ...row }) => ({
+      ...row,
+      so_mon: _count.mon_an,
+    }));
   }
 
   async chiTiet(id: string) {
-    const rows = await this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-      'SELECT * FROM danh_muc_mon WHERE id = ? AND ngay_xoa IS NULL LIMIT 1',
-      bigintTuChuoi(id, 'ID danh mục món'),
-    );
-    if (!rows[0]) throw new LoiNghiepVuException('DANH_MUC_MON_001', 'Không tìm thấy danh mục món.', HttpStatus.NOT_FOUND);
-    return rows[0];
-  }
-
-  async tao(dto: TaoDanhMucMonDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
-    const duongDan = dto.duongDan?.trim() || taoDuongDan(dto.tenDanhMuc);
-    const trung = await this.prisma.$queryRawUnsafe<Array<{ id: bigint }>>(
-      'SELECT id FROM danh_muc_mon WHERE (ma_danh_muc = ? OR duong_dan = ?) LIMIT 1',
-      dto.maDanhMuc,
-      duongDan,
-    );
-    if (trung.length) throw new LoiNghiepVuException('DANH_MUC_MON_002', 'Mã hoặc đường dẫn danh mục đã tồn tại.', HttpStatus.CONFLICT);
-
-    const danhMucMoiId = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(
-        `INSERT INTO danh_muc_mon (ma_danh_muc, ten_danh_muc, duong_dan, mo_ta, hinh_anh, thu_tu, trang_thai)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        dto.maDanhMuc,
-        dto.tenDanhMuc,
-        duongDan,
-        dto.moTa ?? null,
-        dto.hinhAnh ?? null,
-        dto.thuTu ?? 0,
-        dto.trangThai ?? 'HOAT_DONG',
-      );
-
-      const [row] = await tx.$queryRawUnsafe<Array<{ id: bigint }>>(
-        'SELECT LAST_INSERT_ID() AS id',
-      );
-
-      return row.id;
+    const row = await this.prisma.danh_muc_mon.findFirst({
+      where: {
+        id: bigintTuChuoi(id, 'ID danh mục món'),
+        ngay_xoa: null,
+      },
     });
 
-    const moi = await this.chiTiet(danhMucMoiId.toString());
+    if (!row) {
+      throw new LoiNghiepVuException(
+        'DANH_MUC_MON_001',
+        'Không tìm thấy danh mục món.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return row;
+  }
+
+  async tao(
+    dto: TaoDanhMucMonDto,
+    nguoiDung: NguoiDungXacThuc,
+    maYeuCau?: string | null,
+  ) {
+    const duongDan = dto.duongDan?.trim() || taoDuongDan(dto.tenDanhMuc);
+    await this.damBaoKhongTrung(dto.maDanhMuc, duongDan);
+
+    const row = await this.prisma.danh_muc_mon.create({
+      data: {
+        ma_danh_muc: dto.maDanhMuc,
+        ten_danh_muc: dto.tenDanhMuc,
+        duong_dan: duongDan,
+        mo_ta: dto.moTa ?? null,
+        hinh_anh: dto.hinhAnh ?? null,
+        thu_tu: dto.thuTu ?? 0,
+        trang_thai: dto.trangThai ?? 'HOAT_DONG',
+      },
+    });
 
     await this.nhatKy.ghiNhan({
       taiKhoanId: nguoiDung.taiKhoanId,
       hanhDong: 'TAO_DANH_MUC_MON',
       doiTuong: 'DANH_MUC_MON',
-      doiTuongId: danhMucMoiId.toString(),
-      duLieuMoi: moi,
+      doiTuongId: row.id.toString(),
+      duLieuMoi: row,
       maYeuCau,
     });
 
-    return moi;
+    return row;
   }
 
-  async capNhat(id: string, dto: CapNhatDanhMucMonDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
+  async capNhat(
+    id: string,
+    dto: CapNhatDanhMucMonDto,
+    nguoiDung: NguoiDungXacThuc,
+    maYeuCau?: string | null,
+  ) {
     const cu = await this.chiTiet(id);
     const danhMucId = bigintTuChuoi(id, 'ID danh mục món');
-    const duongDanMoi = dto.duongDan !== undefined
-      ? (dto.duongDan.trim() || taoDuongDan(dto.tenDanhMuc ?? String(cu.ten_danh_muc)))
-      : undefined;
 
-    if (dto.maDanhMuc !== undefined || duongDanMoi !== undefined) {
-      const trung = await this.prisma.$queryRawUnsafe<Array<{ id: bigint }>>(
-        `SELECT id FROM danh_muc_mon
-         WHERE id <> ? AND (ma_danh_muc = ? OR duong_dan = ?) LIMIT 1`,
-        danhMucId,
-        dto.maDanhMuc ?? '__KHONG_DOI__',
-        duongDanMoi ?? '__KHONG_DOI__',
+    if (
+      dto.maDanhMuc !== undefined &&
+      dto.maDanhMuc !== cu.ma_danh_muc
+    ) {
+      throw new LoiNghiepVuException(
+        'DANH_MUC_MON_004',
+        'Mã danh mục được cố định sau khi tạo và không thể thay đổi.',
+        HttpStatus.CONFLICT,
       );
-      if (trung.length) throw new LoiNghiepVuException('DANH_MUC_MON_002', 'Mã hoặc đường dẫn danh mục đã tồn tại.', HttpStatus.CONFLICT);
     }
 
-    const capNhat: Array<[string, unknown]> = [];
-    if (dto.maDanhMuc !== undefined) capNhat.push(['ma_danh_muc', dto.maDanhMuc]);
-    if (dto.tenDanhMuc !== undefined) capNhat.push(['ten_danh_muc', dto.tenDanhMuc]);
-    if (duongDanMoi !== undefined) capNhat.push(['duong_dan', duongDanMoi]);
-    if (dto.moTa !== undefined) capNhat.push(['mo_ta', dto.moTa]);
-    if (dto.hinhAnh !== undefined) capNhat.push(['hinh_anh', dto.hinhAnh]);
-    if (dto.thuTu !== undefined) capNhat.push(['thu_tu', dto.thuTu]);
-    if (dto.trangThai !== undefined) capNhat.push(['trang_thai', dto.trangThai]);
-    if (capNhat.length) await this.prisma.$executeRawUnsafe(`UPDATE danh_muc_mon SET ${capNhat.map(([c]) => `${c} = ?`).join(', ')} WHERE id = ?`, ...capNhat.map(([,v]) => v), danhMucId);
+    const duongDanMoi =
+      dto.duongDan !== undefined
+        ? dto.duongDan.trim() ||
+          taoDuongDan(dto.tenDanhMuc ?? cu.ten_danh_muc)
+        : undefined;
 
-    const moi = await this.chiTiet(id);
-    await this.nhatKy.ghiNhan({ taiKhoanId: nguoiDung.taiKhoanId, hanhDong: 'CAP_NHAT_DANH_MUC_MON', doiTuong: 'DANH_MUC_MON', doiTuongId: id, duLieuCu: cu, duLieuMoi: moi, maYeuCau });
-    return moi;
+    if (
+      duongDanMoi !== undefined &&
+      duongDanMoi !== cu.duong_dan
+    ) {
+      const trung = await this.prisma.danh_muc_mon.findFirst({
+        where: {
+          id: { not: danhMucId },
+          duong_dan: duongDanMoi,
+        },
+        select: { id: true },
+      });
+
+      if (trung) {
+        throw new LoiNghiepVuException(
+          'DANH_MUC_MON_002',
+          'Mã hoặc đường dẫn danh mục đã tồn tại.',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
+    const row = await this.prisma.danh_muc_mon.update({
+      where: { id: danhMucId },
+      data: {
+        ...(dto.tenDanhMuc !== undefined
+          ? { ten_danh_muc: dto.tenDanhMuc }
+          : {}),
+        ...(duongDanMoi !== undefined
+          ? { duong_dan: duongDanMoi }
+          : {}),
+        ...(dto.moTa !== undefined
+          ? { mo_ta: dto.moTa }
+          : {}),
+        ...(dto.hinhAnh !== undefined
+          ? { hinh_anh: dto.hinhAnh }
+          : {}),
+        ...(dto.thuTu !== undefined
+          ? { thu_tu: dto.thuTu }
+          : {}),
+        ...(dto.trangThai !== undefined
+          ? { trang_thai: dto.trangThai }
+          : {}),
+      },
+    });
+
+    await this.nhatKy.ghiNhan({
+      taiKhoanId: nguoiDung.taiKhoanId,
+      hanhDong: 'CAP_NHAT_DANH_MUC_MON',
+      doiTuong: 'DANH_MUC_MON',
+      doiTuongId: id,
+      duLieuCu: cu,
+      duLieuMoi: row,
+      maYeuCau,
+    });
+
+    return row;
   }
 
-  async xoa(id: string, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
+  async xoa(
+    id: string,
+    nguoiDung: NguoiDungXacThuc,
+    maYeuCau?: string | null,
+  ) {
     const cu = await this.chiTiet(id);
     const danhMucId = bigintTuChuoi(id, 'ID danh mục món');
-    const [dem] = await this.prisma.$queryRawUnsafe<Array<{ tong: bigint | number }>>('SELECT COUNT(*) AS tong FROM mon_an WHERE danh_muc_id = ? AND ngay_xoa IS NULL', danhMucId);
-    if (Number(dem?.tong ?? 0) > 0) throw new LoiNghiepVuException('DANH_MUC_MON_003', 'Danh mục vẫn còn món ăn. Hãy chuyển hoặc xóa món trước.', HttpStatus.CONFLICT);
-    await this.prisma.$executeRawUnsafe("UPDATE danh_muc_mon SET ngay_xoa = NOW(3), trang_thai = 'NGUNG_HOAT_DONG' WHERE id = ?", danhMucId);
-    await this.nhatKy.ghiNhan({ taiKhoanId: nguoiDung.taiKhoanId, hanhDong: 'XOA_DANH_MUC_MON', doiTuong: 'DANH_MUC_MON', doiTuongId: id, duLieuCu: cu, maYeuCau });
+
+    const soMon = await this.prisma.mon_an.count({
+      where: {
+        danh_muc_id: danhMucId,
+        ngay_xoa: null,
+      },
+    });
+
+    if (soMon > 0) {
+      throw new LoiNghiepVuException(
+        'DANH_MUC_MON_003',
+        'Danh mục vẫn còn món ăn. Hãy chuyển hoặc xóa món trước.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    await this.prisma.danh_muc_mon.update({
+      where: { id: danhMucId },
+      data: {
+        ngay_xoa: new Date(),
+        trang_thai: 'NGUNG_HOAT_DONG',
+      },
+    });
+
+    await this.nhatKy.ghiNhan({
+      taiKhoanId: nguoiDung.taiKhoanId,
+      hanhDong: 'XOA_DANH_MUC_MON',
+      doiTuong: 'DANH_MUC_MON',
+      doiTuongId: id,
+      duLieuCu: cu,
+      maYeuCau,
+    });
+
     return { daXoa: true };
+  }
+
+  private async damBaoKhongTrung(
+    maDanhMuc: string,
+    duongDan: string,
+  ): Promise<void> {
+    const trung = await this.prisma.danh_muc_mon.findFirst({
+      where: {
+        OR: [
+          { ma_danh_muc: maDanhMuc },
+          { duong_dan: duongDan },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (trung) {
+      throw new LoiNghiepVuException(
+        'DANH_MUC_MON_002',
+        'Mã hoặc đường dẫn danh mục đã tồn tại.',
+        HttpStatus.CONFLICT,
+      );
+    }
   }
 }

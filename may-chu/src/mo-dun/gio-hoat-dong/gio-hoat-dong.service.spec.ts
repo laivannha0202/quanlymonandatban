@@ -40,6 +40,12 @@ describe('GioHoatDongService - Prisma wall-clock', () => {
           .mockResolvedValueOnce([])
           .mockResolvedValueOnce([]),
       },
+      dat_ban: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      ngay_nghi_dac_biet: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       $transaction: jest.fn(
         async (callback: (client: any) => unknown) => callback(tx),
       ),

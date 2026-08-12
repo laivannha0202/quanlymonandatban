@@ -43,6 +43,9 @@ describe('NgayDacBietService - Prisma wall-clock', () => {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(row),
       },
+      dat_ban: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     } as any;
 
     const service = new NgayDacBietService(prisma);
