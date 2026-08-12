@@ -1,30 +1,62 @@
-# may-khach — Frontend quản lý nhà hàng
+# Frontend — Quản lý nhà hàng và đặt bàn
 
-React + TypeScript + Vite + Ant Design.
+Frontend React + TypeScript + Vite + Ant Design, nối trực tiếp Backend tại `/api/v1`.
 
-## Chạy local
+## Cài đặt
 
 ```bash
 cp .env.example .env
-npm install
-npm run build
+npm ci
+```
+
+Mặc định:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080/api/v1
+VITE_TEN_NHA_HANG=Nhà hàng
+```
+
+## Chạy development
+
+```bash
 npm run dev
 ```
 
-Backend mặc định: `http://localhost:8080/api/v1`.
+Mở `http://localhost:5173`.
 
-## Phần 10 đã có
+Backend phải chạy tại URL đã cấu hình trong `VITE_API_BASE_URL`.
 
-- Router khách hàng / tài khoản / quản trị.
-- API client bằng `fetch`, tự gắn access token.
-- Refresh token có khóa đồng thời để tránh nhiều request refresh cùng lúc.
-- Đăng nhập, đăng ký, đăng xuất, quên mật khẩu.
-- Thực đơn public.
-- Đặt bàn + lấy khung giờ + tìm bàn + chọn bàn.
-- Tra cứu đặt bàn.
-- Lịch đặt bàn và hồ sơ khách hàng.
-- Dashboard quản trị.
-- Danh sách và workflow đặt bàn quản trị.
-- Danh sách bàn, món, khách hàng, nhân viên.
+## Build và kiểm thử
 
-Các CRUD modal/form quản trị chuyên sâu, báo cáo, khuyến mãi, đánh giá, thông báo và phân quyền UI sẽ nối ở phần tiếp theo.
+```bash
+npm run typecheck
+npm run build
+npm run security:audit
+```
+
+Full browser E2E khi Backend/database đã sẵn sàng:
+
+```bash
+npm run build
+npm run test:e2e
+```
+
+Playwright chạy desktop và mobile; nhóm test sâu kiểm tra các workflow quản trị/CRUD/RBAC.
+
+## Chức năng
+
+Frontend hiện có đầy đủ các khu vực:
+
+- public: trang chủ, thực đơn, chi tiết món, đặt bàn, tra cứu, khuyến mãi;
+- xác thực: đăng ký, đăng nhập, quên/đặt lại/đổi mật khẩu;
+- tài khoản khách: hồ sơ, lịch sử booking, đánh giá, thông báo;
+- quản trị: dashboard, booking, khu vực, bàn, danh mục, món, khách hàng, nhân viên, vai trò/quyền, khuyến mãi, đánh giá, lịch hoạt động, báo cáo.
+
+## Contract
+
+- API dùng camelCase ở frontend.
+- ID từ backend là `string`.
+- Không dùng tên field MySQL snake_case trong `src`.
+- Status nghiệp vụ dùng union type trong `src/kieu/trang-thai.ts`.
+- API client dùng native `fetch`.
+- Refresh token đi qua HttpOnly cookie; access token phục vụ request API.

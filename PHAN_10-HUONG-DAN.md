@@ -1,48 +1,14 @@
-# PHẦN 10 — FRONTEND NỀN + NỐI BACKEND
+# PHẦN 10 — TÀI LIỆU LỊCH SỬ
 
-## Cấu trúc
+File này từng là hướng dẫn khi frontend mới được nối vào backend ở một giai đoạn cũ của đồ án.
 
-ZIP chứa đúng một frontend mới: `may-khach/`. Không tạo thêm backend và không đụng `may-chu/`.
+Nội dung cũ không còn đại diện đầy đủ cho hệ thống hiện tại.
 
-## Cài vào project
+Tài liệu hiện hành:
 
-Tại `~/Downloads/quanlyquanan`, đặt thư mục `may-khach` cạnh `may-chu`:
+- `README.md`: tổng quan và khởi động nhanh.
+- `HUONG_DAN_CHAY_VA_DEMO.md`: chạy, seed demo, test và bàn giao.
+- `may-chu/README.md`: Backend.
+- `may-khach/README.md`: Frontend.
 
-```text
-quanlyquanan/
-├── may-chu/
-└── may-khach/
-```
-
-Sau đó:
-
-```bash
-cd ~/Downloads/quanlyquanan/may-khach
-cp .env.example .env
-npm install
-npm run build
-npm run dev
-```
-
-Backend phải chạy riêng ở port 8080:
-
-```bash
-cd ~/Downloads/quanlyquanan/may-chu
-npm run start:dev
-```
-
-Frontend chạy ở `http://localhost:5173`.
-
-## Test nhanh
-
-1. `/thuc-don` phải hiện 5 món seed.
-2. `/dat-ban` chọn ngày -> phải lấy được khung giờ; tìm bàn -> có phương án.
-3. `/tra-cuu` dùng mã booking test cũ.
-4. `/dang-nhap` đăng nhập admin -> chuyển `/quan-tri`.
-5. Dashboard phải hiện dữ liệu thật từ Backend.
-6. `/quan-tri/dat-ban` thử workflow với booking phù hợp thời gian.
-
-## Không chạy
-
-- Không chạy `prisma pull` hay `prisma generate` trong frontend.
-- Không copy bất kỳ file frontend nào vào `may-chu`.
+Khi tài liệu lịch sử khác source hiện tại, ưu tiên SQL, Prisma/source và các README hiện hành.

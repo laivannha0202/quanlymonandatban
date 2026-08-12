@@ -1,49 +1,41 @@
-# Backend quản lý nhà hàng — Phần 5
+# Backend — Quản lý nhà hàng và đặt bàn
 
-Bộ khung chạy NestJS + Prisma ORM 7 + MySQL, bám theo file SQL `../co-so-du-lieu/quan_ly_nha_hang_mysql.sql`.
+Backend NestJS + Prisma + MySQL cho hệ thống quản lý nhà hàng.
 
-## 1. Yêu cầu
+## Yêu cầu
 
-- Node.js 22/24
-- npm
-- MySQL 8.x
+- Node.js 24 khuyến nghị.
+- npm.
+- MySQL 8.x.
 
-## 2. Import database
+## Database
+
+Nguồn chuẩn:
+
+```text
+../co-so-du-lieu/quan_ly_nha_hang_mysql.sql
+```
+
+Import database:
 
 ```bash
 mysql -u root -p < ../co-so-du-lieu/quan_ly_nha_hang_mysql.sql
 ```
 
-## 3. Cài package
+Không chạy `prisma pull` như một bước khởi động thông thường. `prisma/schema.prisma` được quản lý cùng source và phải đồng nhất với SQL.
 
-```bash
-npm install
-```
-
-## 4. Environment
+## Cài đặt
 
 ```bash
 cp .env.example .env
-```
-
-Điền `DATABASE_URL`, JWT secrets và `SEED_ADMIN_PASSWORD`.
-
-## 5. Introspect database và sinh Prisma Client
-
-```bash
-npm run prisma:pull
+npm ci
 npm run prisma:generate
-```
-
-**Không viết model Prisma khác SQL bằng tay.** Database SQL là nguồn chuẩn.
-
-## 6. Seed Admin
-
-```bash
 npm run seed
 ```
 
-## 7. Chạy development
+Điền `DATABASE_URL`, JWT secrets và tài khoản Admin seed trong `.env`.
+
+## Chạy
 
 ```bash
 npm run start:dev
@@ -53,47 +45,47 @@ npm run start:dev
 - Swagger: `http://localhost:8080/api/tai-lieu`
 - Health: `http://localhost:8080/api/v1/suc-khoe`
 
-## 8. Endpoint đã có trong Phần 5
+## Kiểm thử
 
-```text
-POST /api/v1/xac-thuc/dang-ky
-POST /api/v1/xac-thuc/dang-nhap
-POST /api/v1/xac-thuc/lam-moi-token
-POST /api/v1/xac-thuc/dang-xuat
-GET  /api/v1/xac-thuc/thong-tin-hien-tai
-GET  /api/v1/quan-tri/vai-tro
-GET  /api/v1/suc-khoe
+```bash
+npm run prisma:generate
+npm run build
+npm test -- --runInBand
+npm run security:audit
 ```
 
-## 9. Kiến trúc đã cài
+Khi API đang chạy:
 
-- Global ValidationPipe
-- Global response wrapper
-- Global exception filter
-- BigInt -> string serializer
-- Request/correlation ID
-- Helmet
-- CORS
-- Global rate limit
-- JWT access token
-- Rotating refresh token hash
-- Argon2 password hash
-- Login failure temporary lock
-- Permission decorator + guard
-- Swagger Bearer auth
-- Seed Admin an toàn từ `.env`
+```bash
+npm run test:smoke
+npm run test:concurrency
+```
 
-## 10. Phần tiếp theo
+## Seed demo local
 
-Phần 6 sẽ thêm:
+```bash
+DEMO_SEED_CONFIRM=YES npm run seed:demo
+```
 
-1. `CauHinhService`
-2. `GioHoatDongService`
-3. `NgayDacBietService`
-4. `KhuVucService`
-5. `BanAnService`
-6. `TimBanTrongService`
-7. `GhepBanService`
-8. Unit test engine tìm bàn
+Script từ chối production, DB CI và MySQL ngoài localhost.
 
-Sau đó Phần 7 mới triển khai transaction đặt bàn và chống double-booking.
+## Kiến trúc
+
+Backend hiện có:
+
+- ValidationPipe whitelist/transform.
+- Global response normalizer.
+- Global exception filter và Prisma error mapping.
+- BigInt ID -> string.
+- Helmet + CORS + throttling.
+- JWT access token.
+- rotating refresh token qua HttpOnly cookie.
+- Argon2.
+- RBAC role/permission.
+- Prisma cho CRUD nghiệp vụ.
+- tagged `$queryRaw` chỉ ở truy vấn aggregate/readiness phù hợp.
+- Swagger.
+- upload ảnh.
+- unit test + smoke + concurrency test.
+
+Không dùng `$queryRawUnsafe` hoặc `$executeRawUnsafe`.
