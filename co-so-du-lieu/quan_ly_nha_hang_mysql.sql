@@ -321,7 +321,6 @@ CREATE TABLE IF NOT EXISTS danh_muc_mon (
     ten_danh_muc        VARCHAR(150) NOT NULL,
     duong_dan           VARCHAR(200) NOT NULL,
     mo_ta               TEXT NULL,
-    hinh_anh            VARCHAR(500) NULL,
     thu_tu              INT NOT NULL DEFAULT 0,
     trang_thai          VARCHAR(30) NOT NULL DEFAULT 'HOAT_DONG',
     ngay_tao            DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

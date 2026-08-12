@@ -37,7 +37,6 @@ describe('DanhMucMonService - Prisma CRUD', () => {
       ten_danh_muc: 'Món chính',
       duong_dan: 'mon-chinh',
       mo_ta: null,
-      hinh_anh: null,
       thu_tu: 0,
       trang_thai: 'HOAT_DONG',
       ngay_xoa: null,

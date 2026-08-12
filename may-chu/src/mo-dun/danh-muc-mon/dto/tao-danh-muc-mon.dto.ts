@@ -27,12 +27,6 @@ export class TaoDanhMucMonDto {
   @MaxLength(2000)
   moTa?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  hinhAnh?: string;
-
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
   @Type(() => Number)

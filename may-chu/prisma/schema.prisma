@@ -92,7 +92,6 @@ model danh_muc_mon {
   ten_danh_muc  String    @db.VarChar(150)
   duong_dan     String    @unique(map: "uk_danh_muc_mon_duong_dan") @db.VarChar(200)
   mo_ta         String?   @db.Text
-  hinh_anh      String?   @db.VarChar(500)
   thu_tu        Int       @default(0)
   trang_thai    String    @default("HOAT_DONG") @db.VarChar(30)
   ngay_tao      DateTime  @default(now())

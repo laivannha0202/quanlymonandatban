@@ -21,7 +21,6 @@ export interface DanhMucMon {
   tenDanhMuc: string;
   duongDan: string;
   moTa?: string | null;
-  hinhAnh?: string | null;
   thuTu?: number;
   soMon?: number;
 }

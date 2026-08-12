@@ -106,7 +106,6 @@ export class DanhMucMonService {
         ten_danh_muc: dto.tenDanhMuc,
         duong_dan: duongDan,
         mo_ta: dto.moTa ?? null,
-        hinh_anh: dto.hinhAnh ?? null,
         thu_tu: dto.thuTu ?? 0,
         trang_thai: dto.trangThai ?? 'HOAT_DONG',
       },
@@ -182,9 +181,6 @@ export class DanhMucMonService {
           : {}),
         ...(dto.moTa !== undefined
           ? { mo_ta: dto.moTa }
-          : {}),
-        ...(dto.hinhAnh !== undefined
-          ? { hinh_anh: dto.hinhAnh }
           : {}),
         ...(dto.thuTu !== undefined
           ? { thu_tu: dto.thuTu }

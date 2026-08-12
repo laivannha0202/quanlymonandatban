@@ -274,7 +274,6 @@ async function main(): Promise<void> {
         ten: 'Khai vị',
         duongDan: 'khai-vi-huong-viet',
         moTa: 'Những món mở đầu nhẹ nhàng, tươi vị và dễ chia sẻ.',
-        hinhAnh: '/hinh-anh/mon-an-1.jpg',
         thuTu: 1,
       },
       {
@@ -282,7 +281,6 @@ async function main(): Promise<void> {
         ten: 'Món chính',
         duongDan: 'mon-chinh-huong-viet',
         moTa: 'Các món Việt đậm đà, phù hợp bữa trưa, bữa tối và dùng chung.',
-        hinhAnh: '/hinh-anh/mon-an-2.jpg',
         thuTu: 2,
       },
       {
@@ -290,7 +288,6 @@ async function main(): Promise<void> {
         ten: 'Đồ uống',
         duongDan: 'do-uong-huong-viet',
         moTa: 'Đồ uống mát, cà phê và thức uống quen thuộc.',
-        hinhAnh: '/hinh-anh/mon-an-5.jpg',
         thuTu: 3,
       },
       {
@@ -298,7 +295,6 @@ async function main(): Promise<void> {
         ten: 'Tráng miệng',
         duongDan: 'trang-mieng-huong-viet',
         moTa: 'Vị ngọt nhẹ để khép lại bữa ăn trọn vẹn.',
-        hinhAnh: '/hinh-anh/mon-an-6.jpg',
         thuTu: 4,
       },
     ] as const;
@@ -313,7 +309,6 @@ async function main(): Promise<void> {
           ten_danh_muc: item.ten,
           duong_dan: item.duongDan,
           mo_ta: item.moTa,
-          hinh_anh: item.hinhAnh,
           thu_tu: item.thuTu,
           trang_thai: 'HOAT_DONG',
         },
@@ -321,7 +316,6 @@ async function main(): Promise<void> {
           ten_danh_muc: item.ten,
           duong_dan: item.duongDan,
           mo_ta: item.moTa,
-          hinh_anh: item.hinhAnh,
           thu_tu: item.thuTu,
           trang_thai: 'HOAT_DONG',
           ngay_xoa: null,

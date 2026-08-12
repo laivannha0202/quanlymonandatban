@@ -14,7 +14,6 @@ export interface DanhMucQuanTri {
   tenDanhMuc: string;
   duongDan: string;
   moTa?: string | null;
-  hinhAnh?: string | null;
   thuTu: number;
   trangThai: string;
   soMon?: number;
@@ -111,7 +110,6 @@ type DanhMucPayload = {
   tenDanhMuc?: string;
   duongDan?: string;
   moTa?: string;
-  hinhAnh?: string;
   thuTu?: number;
   trangThai?: string;
 };
