@@ -9,7 +9,7 @@ import { GioHoatDongService } from './gio-hoat-dong.service';
 @ApiTags('Quản trị - Giờ hoạt động')
 @ApiBearerAuth()
 @UseGuards(JwtGuard, QuyenGuard)
-@CanQuyen('CAU_HINH_QUAN_LY')
+@CanQuyen('LICH_PHUC_VU_QUAN_LY')
 @Controller('quan-tri/gio-hoat-dong')
 export class GioHoatDongController {
   constructor(private readonly service: GioHoatDongService) {}

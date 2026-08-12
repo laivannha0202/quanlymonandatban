@@ -10,7 +10,7 @@ import { NgayDacBietService } from './ngay-dac-biet.service';
 @ApiTags('Quản trị - Ngày đặc biệt')
 @ApiBearerAuth()
 @UseGuards(JwtGuard, QuyenGuard)
-@CanQuyen('CAU_HINH_QUAN_LY')
+@CanQuyen('LICH_PHUC_VU_QUAN_LY')
 @Controller('quan-tri/ngay-dac-biet')
 export class NgayDacBietController {
   constructor(private readonly service: NgayDacBietService) {}

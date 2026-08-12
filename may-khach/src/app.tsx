@@ -33,8 +33,6 @@ const QuanTriKhuyenMai = lazy(() => import('@/trang/quan-tri/khuyen-mai').then((
 const QuanTriDanhGia = lazy(() => import('@/trang/quan-tri/danh-gia').then((m) => ({ default: m.QuanTriDanhGia })));
 const QuanTriBaoCao = lazy(() => import('@/trang/quan-tri/bao-cao').then((m) => ({ default: m.QuanTriBaoCao })));
 const QuanTriVaiTro = lazy(() => import('@/trang/quan-tri/vai-tro').then((m) => ({ default: m.QuanTriVaiTro })));
-const QuanTriNhatKy = lazy(() => import('@/trang/quan-tri/nhat-ky').then((m) => ({ default: m.QuanTriNhatKy })));
-const QuanTriCauHinh = lazy(() => import('@/trang/quan-tri/cau-hinh').then((m) => ({ default: m.QuanTriCauHinh })));
 const QuanTriGioHoatDong = lazy(() => import('@/trang/quan-tri/gio-hoat-dong').then((m) => ({ default: m.QuanTriGioHoatDong })));
 const QuanTriNgayDacBiet = lazy(() => import('@/trang/quan-tri/ngay-dac-biet').then((m) => ({ default: m.QuanTriNgayDacBiet })));
 const KhongTimThay = lazy(() => import('@/trang/khong-tim-thay').then((m) => ({ default: m.KhongTimThay })));
@@ -78,10 +76,8 @@ export function UngDung() {
         <Route path="danh-gia" element={<BaoVeQuyen quyen="DANH_GIA_XEM"><QuanTriDanhGia /></BaoVeQuyen>} />
         <Route path="bao-cao" element={<BaoVeQuyen quyen="BAO_CAO_XEM"><QuanTriBaoCao /></BaoVeQuyen>} />
         <Route path="vai-tro" element={<BaoVeQuyen quyen="VAI_TRO_QUAN_LY"><QuanTriVaiTro /></BaoVeQuyen>} />
-        <Route path="gio-hoat-dong" element={<BaoVeQuyen quyen="CAU_HINH_QUAN_LY"><QuanTriGioHoatDong /></BaoVeQuyen>} />
-        <Route path="ngay-dac-biet" element={<BaoVeQuyen quyen="CAU_HINH_QUAN_LY"><QuanTriNgayDacBiet /></BaoVeQuyen>} />
-        <Route path="cau-hinh" element={<BaoVeQuyen quyen="CAU_HINH_QUAN_LY"><QuanTriCauHinh /></BaoVeQuyen>} />
-        <Route path="nhat-ky" element={<BaoVeQuyen quyen="NHAT_KY_XEM"><QuanTriNhatKy /></BaoVeQuyen>} />
+        <Route path="gio-hoat-dong" element={<BaoVeQuyen quyen="LICH_PHUC_VU_QUAN_LY"><QuanTriGioHoatDong /></BaoVeQuyen>} />
+        <Route path="ngay-dac-biet" element={<BaoVeQuyen quyen="LICH_PHUC_VU_QUAN_LY"><QuanTriNgayDacBiet /></BaoVeQuyen>} />
       </Route>
     </Route>
     <Route path="*" element={<KhongTimThay />} />

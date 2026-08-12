@@ -82,21 +82,6 @@ export interface VaiTro {
   quyen: Quyen[];
 }
 
-export interface NhatKy {
-  id: string;
-  taiKhoanId?: string | null;
-  hanhDong: string;
-  doiTuong: string;
-  doiTuongId?: string | null;
-  duLieuCu?: unknown;
-  duLieuMoi?: unknown;
-  diaChiIp?: string | null;
-  userAgent?: string | null;
-  maYeuCau?: string | null;
-  emailTaiKhoan?: string | null;
-  thoiGian: string;
-}
-
 export interface BaoCaoDatBan {
   tuNgay: string;
   denNgay: string;
@@ -190,9 +175,6 @@ export const heThongApi = {
     goiApi<BaoCaoKhachHang>(`/quan-tri/bao-cao/khach-hang${taoQuery({ tuNgay, denNgay })}`, { xacThuc: true }),
   baoCaoDanhGia: (tuNgay?: string, denNgay?: string) =>
     goiApi<BaoCaoDanhGia>(`/quan-tri/bao-cao/danh-gia${taoQuery({ tuNgay, denNgay })}`, { xacThuc: true }),
-
-  nhatKy: (p: Record<string, string | number | undefined> = {}) =>
-    goiApi<DanhSachPhanTrang<NhatKy>>(`/quan-tri/nhat-ky${taoQuery({ trang: 1, kichThuoc: 50, ...p })}`, { xacThuc: true }),
 
   vaiTro: () => goiApi<VaiTro[]>('/quan-tri/vai-tro', { xacThuc: true }),
   quyen: () => goiApi<Quyen[]>('/quan-tri/quyen', { xacThuc: true }),

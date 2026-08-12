@@ -662,8 +662,7 @@ VALUES
     ('BAO_CAO_XEM', 'Xem báo cáo', 'BAO_CAO', NULL),
     ('TAI_KHOAN_QUAN_LY', 'Quản lý tài khoản', 'HE_THONG', NULL),
     ('VAI_TRO_QUAN_LY', 'Quản lý vai trò và quyền', 'HE_THONG', NULL),
-    ('NHAT_KY_XEM', 'Xem nhật ký hoạt động', 'HE_THONG', NULL),
-    ('CAU_HINH_QUAN_LY', 'Quản lý cấu hình', 'HE_THONG', NULL)
+    ('LICH_PHUC_VU_QUAN_LY', 'Quản lý lịch phục vụ', 'LICH_PHUC_VU', NULL)
 ON DUPLICATE KEY UPDATE
     ten_quyen = VALUES(ten_quyen),
     nhom_quyen = VALUES(nhom_quyen),

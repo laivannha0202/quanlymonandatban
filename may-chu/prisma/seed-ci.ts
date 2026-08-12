@@ -65,8 +65,7 @@ const quyen = [
   ['BAO_CAO_XEM', 'BAO_CAO'],
   ['TAI_KHOAN_QUAN_LY', 'HE_THONG'],
   ['VAI_TRO_QUAN_LY', 'HE_THONG'],
-  ['NHAT_KY_XEM', 'HE_THONG'],
-  ['CAU_HINH_QUAN_LY', 'HE_THONG'],
+  ['LICH_PHUC_VU_QUAN_LY', 'LICH_PHUC_VU'],
 ] as const;
 
 const quyenNhanVien = new Set([

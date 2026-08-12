@@ -94,16 +94,6 @@ export interface NhanVienQuanTri {
   lanDangNhapCuoi?: string | null;
 }
 
-export interface CauHinhQuanTri {
-  id: string;
-  khoa: string;
-  giaTri: string;
-  kieuDuLieu: 'CHUOI' | 'SO' | 'BOOLEAN' | 'JSON';
-  nhom: string;
-  moTa?: string | null;
-  choPhepSua: boolean;
-}
-
 export interface GioHoatDongQuanTri {
   id: string;
   thuTrongTuan: number;
@@ -329,11 +319,6 @@ export const quanTriApi = {
     goiApi<NhanVienQuanTri>(`/quan-tri/nhan-vien/${id}`, { method: 'PATCH', xacThuc: true, body: JSON.stringify(duLieu) }),
   capNhatTrangThaiNhanVien: (id: string, trangThai: 'HOAT_DONG' | 'TAM_NGHI' | 'DA_NGHI') =>
     goiApi<NhanVienQuanTri>(`/quan-tri/nhan-vien/${id}/trang-thai`, { method: 'PATCH', xacThuc: true, body: JSON.stringify({ trangThai }) }),
-
-  cauHinh: (nhom?: string) =>
-    goiApi<CauHinhQuanTri[]>(`/quan-tri/cau-hinh${taoQuery({ nhom })}`, { xacThuc: true }),
-  capNhatCauHinh: (danhSach: Array<{ khoa: string; giaTri: string }>) =>
-    goiApi<CauHinhQuanTri[]>('/quan-tri/cau-hinh', { method: 'PATCH', xacThuc: true, body: JSON.stringify({ danhSach }) }),
 
   gioHoatDong: () =>
     goiApi<GioHoatDongQuanTri[]>('/quan-tri/gio-hoat-dong', { xacThuc: true }),
