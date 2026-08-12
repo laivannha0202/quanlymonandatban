@@ -53,3 +53,27 @@ export function soNgayTuHienTaiDen(ngay: string): number {
   const hienTai = Date.now();
   return Math.floor((moc - hienTai) / 86_400_000);
 }
+
+
+/**
+ * Prisma DateTime + MySQL DATETIME trong hệ thống được dùng như
+ * wall-clock nghiệp vụ Việt Nam. Date trả về ở đây là carrier:
+ * component UTC chính là ngày/giờ cần lưu hoặc so sánh trong DB.
+ */
+export function dateWallClockTuNgayGioSql(value: string): Date {
+  const normalized = value.trim().replace(' ', 'T');
+  const date = new Date(`${normalized}.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Ngày giờ SQL không hợp lệ: ${value}`);
+  }
+  return date;
+}
+
+export function hienTaiWallClockVietNam(): Date {
+  const hienTaiVietNam = new Date(
+    Date.now() + 7 * 60 * 60 * 1000,
+  );
+  return new Date(
+    `${hienTaiVietNam.toISOString().slice(0, 23)}Z`,
+  );
+}

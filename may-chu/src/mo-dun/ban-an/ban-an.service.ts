@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
+import { hienTaiWallClockVietNam } from '../../dung-chung/tien-ich/ngay-gio';
 import { CapNhatBanAnDto } from './dto/cap-nhat-ban-an.dto';
 import { DanhSachBanAnDto } from './dto/danh-sach-ban-an.dto';
 import { TaoBanAnDto } from './dto/tao-ban-an.dto';
@@ -122,17 +123,23 @@ export class BanAnService {
 
   async xoa(id: string) {
     const ban = await this.chiTiet(id);
-    const rows = await this.prisma.$queryRawUnsafe<Array<{ tong: bigint }>>(
-      `SELECT COUNT(*) AS tong
-       FROM chi_tiet_dat_ban ctdb
-       INNER JOIN dat_ban db ON db.id = ctdb.dat_ban_id
-       WHERE ctdb.ban_an_id = ?
-         AND db.trang_thai IN ('CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN')
-         AND db.gio_ket_thuc > NOW()`,
-      ban.id,
-    );
+    const soLichConHieuLuc = await this.prisma.dat_ban.count({
+      where: {
+        trang_thai: {
+          in: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN'],
+        },
+        gio_ket_thuc: {
+          gt: hienTaiWallClockVietNam(),
+        },
+        chi_tiet_dat_ban: {
+          some: {
+            ban_an_id: ban.id,
+          },
+        },
+      },
+    });
 
-    if (Number(rows[0]?.tong ?? 0) > 0) {
+    if (soLichConHieuLuc > 0) {
       throw new LoiNghiepVuException(
         'BAN_AN_003',
         'Bàn đang có lịch đặt còn hiệu lực nên không thể xóa.',

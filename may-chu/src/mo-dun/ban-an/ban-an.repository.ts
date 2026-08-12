@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
+import { dateWallClockTuNgayGioSql } from '../../dung-chung/tien-ich/ngay-gio';
 
 export interface BanKhaDung {
   id: bigint;
@@ -54,19 +55,28 @@ export class BanAnRepository {
   ): Promise<Set<string>> {
     if (!banIds.length) return new Set();
 
-    const placeholders = banIds.map(() => '?').join(', ');
-    const rows = await this.prisma.$queryRawUnsafe<Array<{ ban_an_id: bigint }>>(
-      `SELECT DISTINCT ctdb.ban_an_id
-       FROM chi_tiet_dat_ban ctdb
-       INNER JOIN dat_ban db ON db.id = ctdb.dat_ban_id
-       WHERE ctdb.ban_an_id IN (${placeholders})
-         AND db.trang_thai IN ('CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN')
-         AND db.gio_bat_dau < ?
-         AND db.gio_ket_thuc > ?`,
-      ...banIds,
-      gioKetThucSql,
-      gioBatDauSql,
-    );
+    const rows = await this.prisma.chi_tiet_dat_ban.findMany({
+      where: {
+        ban_an_id: {
+          in: banIds,
+        },
+        dat_ban: {
+          trang_thai: {
+            in: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN'],
+          },
+          gio_bat_dau: {
+            lt: dateWallClockTuNgayGioSql(gioKetThucSql),
+          },
+          gio_ket_thuc: {
+            gt: dateWallClockTuNgayGioSql(gioBatDauSql),
+          },
+        },
+      },
+      distinct: ['ban_an_id'],
+      select: {
+        ban_an_id: true,
+      },
+    });
 
     return new Set(rows.map((row) => row.ban_an_id.toString()));
   }
