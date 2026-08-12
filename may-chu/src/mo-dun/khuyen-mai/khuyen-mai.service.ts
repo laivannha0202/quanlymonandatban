@@ -22,8 +22,6 @@ type KhuyenMaiRow = {
   giam_toi_da: GiaTriSo | null;
   ngay_bat_dau: Date;
   ngay_ket_thuc: Date;
-  so_luot_toi_da: number | null;
-  so_luot_da_dung: number;
   trang_thai: string;
   ngay_tao: Date;
   ngay_cap_nhat: Date;
@@ -53,13 +51,9 @@ export class KhuyenMaiService {
       ],
     });
 
-    return rows
-      .filter(
-        (row) =>
-          row.so_luot_toi_da == null ||
-          row.so_luot_da_dung < row.so_luot_toi_da,
-      )
-      .map((row) => this.toView(row as KhuyenMaiRow));
+    return rows.map((row) =>
+      this.toView(row as KhuyenMaiRow),
+    );
   }
 
   async danhSach(dto: DanhSachKhuyenMaiDto) {
@@ -154,7 +148,6 @@ export class KhuyenMaiService {
             : null,
         ngay_bat_dau: new Date(dto.ngayBatDau),
         ngay_ket_thuc: new Date(dto.ngayKetThuc),
-        so_luot_toi_da: dto.soLuotToiDa ?? null,
         trang_thai: dto.trangThai ?? 'HOAT_DONG',
       },
     });
@@ -229,17 +222,6 @@ export class KhuyenMaiService {
       giamToiDaMoi,
     );
 
-    if (
-      dto.soLuotToiDa !== undefined &&
-      dto.soLuotToiDa < cu.so_luot_da_dung
-    ) {
-      throw new LoiNghiepVuException(
-        'KHUYEN_MAI_006',
-        'Số lượt tối đa không được nhỏ hơn số lượt đã sử dụng.',
-        HttpStatus.CONFLICT,
-      );
-    }
-
     const row = await this.prisma.khuyen_mai.update({
       where: { id: khuyenMaiId },
       data: {
@@ -271,9 +253,6 @@ export class KhuyenMaiService {
           : {}),
         ...(dto.ngayKetThuc !== undefined
           ? { ngay_ket_thuc: new Date(dto.ngayKetThuc) }
-          : {}),
-        ...(dto.soLuotToiDa !== undefined
-          ? { so_luot_toi_da: dto.soLuotToiDa }
           : {}),
         ...(dto.trangThai !== undefined
           ? { trang_thai: dto.trangThai }

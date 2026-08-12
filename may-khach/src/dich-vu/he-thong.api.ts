@@ -30,8 +30,6 @@ export interface KhuyenMai {
   giamToiDa?: number | null;
   ngayBatDau: string;
   ngayKetThuc: string;
-  soLuotToiDa?: number | null;
-  soLuotDaDung?: number;
   trangThai: string;
 }
 
@@ -124,7 +122,6 @@ type KhuyenMaiPayload = {
   giamToiDa?: number;
   ngayBatDau?: string;
   ngayKetThuc?: string;
-  soLuotToiDa?: number;
   trangThai?: string;
 };
 

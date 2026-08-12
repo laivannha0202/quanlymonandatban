@@ -396,8 +396,6 @@ CREATE TABLE IF NOT EXISTS khuyen_mai (
     giam_toi_da         DECIMAL(15,2) NULL,
     ngay_bat_dau        DATETIME(3) NOT NULL,
     ngay_ket_thuc       DATETIME(3) NOT NULL,
-    so_luot_toi_da      INT UNSIGNED NULL,
-    so_luot_da_dung     INT UNSIGNED NOT NULL DEFAULT 0,
     trang_thai          VARCHAR(30) NOT NULL DEFAULT 'HOAT_DONG',
     ngay_tao            DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     ngay_cap_nhat       DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),

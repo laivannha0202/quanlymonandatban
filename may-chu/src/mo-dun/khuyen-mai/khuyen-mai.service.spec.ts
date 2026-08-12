@@ -24,8 +24,6 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
     ngay_ket_thuc: new Date(
       '2026-08-31T23:59:59.000Z',
     ),
-    so_luot_toi_da: 100,
-    so_luot_da_dung: 10,
     trang_thai: 'HOAT_DONG',
     ngay_tao: new Date(
       '2026-08-01T00:00:00.000Z',
@@ -63,18 +61,10 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
     );
   });
 
-  it('public loại chương trình đã hết lượt', async () => {
+  it('public chỉ query chương trình hoạt động trong thời gian hiệu lực', async () => {
     const prisma = {
       khuyen_mai: {
-        findMany: jest.fn().mockResolvedValue([
-          row,
-          {
-            ...row,
-            id: 2n,
-            so_luot_toi_da: 10,
-            so_luot_da_dung: 10,
-          },
-        ]),
+        findMany: jest.fn().mockResolvedValue([row]),
       },
     } as any;
 
@@ -86,7 +76,21 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
     const result = await service.dangApDung();
 
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe(1n);
+    expect(prisma.khuyen_mai.findMany)
+      .toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            ngay_xoa: null,
+            trang_thai: 'HOAT_DONG',
+            ngay_bat_dau: expect.objectContaining({
+              lte: expect.any(Date),
+            }),
+            ngay_ket_thuc: expect.objectContaining({
+              gte: expect.any(Date),
+            }),
+          }),
+        }),
+      );
   });
 
   it('không cho đổi mã khuyến mãi sau khi tạo', async () => {
@@ -160,35 +164,6 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
           giam_toi_da: null,
         }),
       });
-  });
-
-  it('không cho hạ quota xuống dưới số lượt đã dùng', async () => {
-    const prisma = {
-      khuyen_mai: {
-        findFirst: jest.fn().mockResolvedValue(row),
-        update: jest.fn(),
-      },
-    } as any;
-
-    const service = new KhuyenMaiService(
-      prisma,
-      {} as any,
-    );
-
-    await expect(
-      service.capNhat(
-        '1',
-        {
-          soLuotToiDa: 5,
-        },
-        nguoiDung,
-      ),
-    ).rejects.toMatchObject({
-      maLoi: 'KHUYEN_MAI_006',
-    });
-
-    expect(prisma.khuyen_mai.update)
-      .not.toHaveBeenCalled();
   });
 
   it('soft-delete bằng Prisma và ngừng hoạt động', async () => {

@@ -532,8 +532,6 @@ async function main(): Promise<void> {
           giam_toi_da: giamToiDa,
           ngay_bat_dau: batDauKhuyenMai,
           ngay_ket_thuc: ketThucKhuyenMai,
-          so_luot_toi_da: 500,
-          so_luot_da_dung: 24,
           trang_thai: 'HOAT_DONG',
         },
         update: {
@@ -545,8 +543,6 @@ async function main(): Promise<void> {
           giam_toi_da: giamToiDa,
           ngay_bat_dau: batDauKhuyenMai,
           ngay_ket_thuc: ketThucKhuyenMai,
-          so_luot_toi_da: 500,
-          so_luot_da_dung: 24,
           trang_thai: 'HOAT_DONG',
           ngay_xoa: null,
         },

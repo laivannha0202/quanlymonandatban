@@ -34,7 +34,6 @@ type HieuLuc =
   | 'DANG_AP_DUNG'
   | 'SAP_DIEN_RA'
   | 'DA_HET_HAN'
-  | 'DA_HET_LUOT'
   | 'NGUNG_HOAT_DONG';
 
 type FormData = {
@@ -47,7 +46,6 @@ type FormData = {
   giamToiDa?: number;
   ngayBatDau: Dayjs;
   ngayKetThuc: Dayjs;
-  soLuotToiDa?: number;
   trangThai?: string;
 };
 
@@ -85,13 +83,6 @@ function tinhHieuLuc(r: KhuyenMai): HieuLuc {
   if (batDau.isValid() && hienTai.isBefore(batDau)) return 'SAP_DIEN_RA';
   if (ketThuc.isValid() && hienTai.isAfter(ketThuc)) return 'DA_HET_HAN';
 
-  if (
-    r.soLuotToiDa != null &&
-    Number(r.soLuotDaDung ?? 0) >= Number(r.soLuotToiDa)
-  ) {
-    return 'DA_HET_LUOT';
-  }
-
   return 'DANG_AP_DUNG';
 }
 
@@ -99,7 +90,6 @@ const hieuLucMeta: Record<HieuLuc, { nhan: string; mau?: string }> = {
   DANG_AP_DUNG: { nhan: 'Đang áp dụng', mau: 'green' },
   SAP_DIEN_RA: { nhan: 'Sắp diễn ra', mau: 'blue' },
   DA_HET_HAN: { nhan: 'Đã hết hạn' },
-  DA_HET_LUOT: { nhan: 'Đã hết lượt', mau: 'orange' },
   NGUNG_HOAT_DONG: { nhan: 'Ngừng hoạt động', mau: 'red' },
 };
 
@@ -193,7 +183,6 @@ export function QuanTriKhuyenMai() {
       giaTri: r.giaTri,
       giaTriDonToiThieu: r.giaTriDonToiThieu ?? undefined,
       giamToiDa: r.giamToiDa ?? undefined,
-      soLuotToiDa: r.soLuotToiDa ?? undefined,
       ngayBatDau: dayjs(r.ngayBatDau),
       ngayKetThuc: dayjs(r.ngayKetThuc),
       trangThai: r.trangThai,
@@ -224,8 +213,6 @@ export function QuanTriKhuyenMai() {
         v.loaiGiam === 'PHAN_TRAM' && v.giamToiDa != null
           ? Number(v.giamToiDa)
           : undefined,
-      soLuotToiDa:
-        v.soLuotToiDa == null ? undefined : Number(v.soLuotToiDa),
       ngayBatDau: v.ngayBatDau.toISOString(),
       ngayKetThuc: v.ngayKetThuc.toISOString(),
       trangThai: v.trangThai,
@@ -256,7 +243,7 @@ export function QuanTriKhuyenMai() {
     <>
       <TieuDeTrang
         tieuDe="Khuyến mãi"
-        moTa="Theo dõi chương trình đang áp dụng, thời hạn, mức ưu đãi và số lượt sử dụng."
+        moTa="Theo dõi chương trình đang áp dụng, thời hạn, mức ưu đãi và điều kiện sử dụng."
         hanhDong={
           coQuanLy ? (
             <Button type="primary" icon={<PlusOutlined />} onClick={moTao}>
@@ -298,7 +285,6 @@ export function QuanTriKhuyenMai() {
               { value: 'DANG_AP_DUNG', label: 'Đang áp dụng' },
               { value: 'SAP_DIEN_RA', label: 'Sắp diễn ra' },
               { value: 'DA_HET_HAN', label: 'Đã hết hạn' },
-              { value: 'DA_HET_LUOT', label: 'Đã hết lượt' },
               { value: 'NGUNG_HOAT_DONG', label: 'Ngừng hoạt động' },
             ]}
           />
@@ -374,20 +360,6 @@ export function QuanTriKhuyenMai() {
                 <div className="admin-promo-time">
                   <span>Từ {dinhDangNgayGio(r.ngayBatDau)}</span>
                   <span>Đến {dinhDangNgayGio(r.ngayKetThuc)}</span>
-                </div>
-              ),
-            },
-            {
-              title: 'Sử dụng',
-              width: 140,
-              render: (_: unknown, r: KhuyenMai) => (
-                <div className="admin-promo-usage">
-                  <strong>{Number(r.soLuotDaDung ?? 0)}</strong>
-                  <span>
-                    {r.soLuotToiDa != null
-                      ? ` / ${r.soLuotToiDa} lượt`
-                      : ' lượt · không giới hạn'}
-                  </span>
                 </div>
               ),
             },
@@ -608,7 +580,7 @@ export function QuanTriKhuyenMai() {
                   extra="Bỏ trống nếu không giới hạn."
                 >
                   <InputNumber
-                    min={0}
+                    min={0.01}
                     step={1000}
                     addonAfter="₫"
                     style={{ width: 210 }}
@@ -623,7 +595,7 @@ export function QuanTriKhuyenMai() {
           <div className="admin-promo-form-section">
             <div className="admin-promo-form-heading">
               <strong>Điều kiện áp dụng</strong>
-              <span>Giới hạn hóa đơn và tổng lượt dùng của chương trình.</span>
+              <span>Điều kiện giá trị đơn để nhân viên áp dụng chương trình tại nhà hàng.</span>
             </div>
 
             <Space className="form-row" align="start" wrap>
@@ -637,19 +609,6 @@ export function QuanTriKhuyenMai() {
                   step={10000}
                   addonAfter="₫"
                   style={{ width: 240 }}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="soLuotToiDa"
-                label="Tổng lượt sử dụng"
-                extra="Bỏ trống nếu không giới hạn."
-              >
-                <InputNumber
-                  min={1}
-                  precision={0}
-                  addonAfter="lượt"
-                  style={{ width: 220 }}
                 />
               </Form.Item>
 
