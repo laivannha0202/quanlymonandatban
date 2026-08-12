@@ -43,3 +43,6 @@ may-chu/uploads/
 
 # Local patch backups
 **/*.bak_*
+
+# Local audit reports
+AUDIT_BASELINE.txt
