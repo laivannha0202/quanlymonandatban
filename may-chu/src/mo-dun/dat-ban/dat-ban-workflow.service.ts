@@ -265,8 +265,33 @@ export class DatBanWorkflowService {
         await tx.ban_an.updateMany({ where: { id: { in: banDaKhoa.map((x) => x.id) } }, data: { trang_thai: 'DANG_SU_DUNG' } });
       }
 
-      if (trangThaiMoi === 'DA_HOAN_THANH' && banDaKhoa.length) {
-        await tx.ban_an.updateMany({ where: { id: { in: banDaKhoa.map((x) => x.id) } }, data: { trang_thai: 'TRONG' } });
+      if (trangThaiMoi === 'DA_HOAN_THANH') {
+        if (!banDaKhoa.length) {
+          throw new LoiNghiepVuException(
+            'DAT_BAN_016',
+            'Đặt bàn không còn thông tin bàn đang phục vụ.',
+            HttpStatus.CONFLICT,
+          );
+        }
+
+        if (banDaKhoa.some((x) => x.trang_thai !== 'DANG_SU_DUNG')) {
+          throw new LoiNghiepVuException(
+            'DAT_BAN_017',
+            'Một hoặc nhiều bàn không ở trạng thái đang sử dụng.',
+            HttpStatus.CONFLICT,
+          );
+        }
+
+        await tx.ban_an.updateMany({
+          where: {
+            id: {
+              in: banDaKhoa.map((x) => x.id),
+            },
+          },
+          data: {
+            trang_thai: 'TRONG',
+          },
+        });
       }
 
       await tx.dat_ban.update({
