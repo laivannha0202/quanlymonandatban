@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
@@ -202,11 +203,20 @@ export class DatBanWorkflowService {
     await this.prisma.$transaction(async (tx) => {
       let banDaKhoa: Array<{ id: bigint; trang_thai: string }> = [];
       if (banIds.length) {
-        const placeholders = banIds.map(() => '?').join(', ');
-        banDaKhoa = await tx.$queryRawUnsafe<Array<{ id: bigint; trang_thai: string }>>(
-          `SELECT id, trang_thai FROM ban_an WHERE id IN (${placeholders}) ORDER BY id FOR UPDATE`,
-          ...banIds,
-        );
+        // Raw SQL có chủ đích: khóa trạng thái các bàn trước khi
+        // check-in/hoàn thành. Prisma.join bind toàn bộ ID an toàn.
+        banDaKhoa = await tx.$queryRaw<
+          Array<{
+            id: bigint;
+            trang_thai: string;
+          }>
+        >(Prisma.sql`
+          SELECT id, trang_thai
+          FROM ban_an
+          WHERE id IN (${Prisma.join(banIds)})
+          ORDER BY id
+          FOR UPDATE
+        `);
       }
 
       const datBan = await this.repository.khoaDatBan(tx, datBanId);
