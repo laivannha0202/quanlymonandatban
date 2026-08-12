@@ -31,6 +31,7 @@ export class TaoNhanVienDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   tenDangNhap?: string;
 
@@ -49,6 +50,7 @@ export class TaoNhanVienDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(30)
   soDienThoai?: string;
 

@@ -20,6 +20,7 @@ export class CapNhatNhanVienDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(30)
   soDienThoai?: string;
 
