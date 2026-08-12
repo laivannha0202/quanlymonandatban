@@ -183,7 +183,7 @@ model hinh_anh_mon {
 model khach_hang {
   id            BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
   tai_khoan_id  BigInt?    @unique(map: "uk_khach_hang_tai_khoan") @db.UnsignedBigInt
-  ma_khach_hang String?    @unique(map: "uk_khach_hang_ma") @db.VarChar(30)
+  ma_khach_hang String     @unique(map: "uk_khach_hang_ma") @db.VarChar(30)
   ho_ten        String     @db.VarChar(150)
   so_dien_thoai String     @unique(map: "uk_khach_hang_sdt") @db.VarChar(30)
   email         String?    @db.VarChar(255)

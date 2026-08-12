@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS token_dat_lai_mat_khau (
 CREATE TABLE IF NOT EXISTS khach_hang (
     id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     tai_khoan_id        BIGINT UNSIGNED NULL,
-    ma_khach_hang       VARCHAR(30) NULL,
+    ma_khach_hang       VARCHAR(30) NOT NULL,
     ho_ten              VARCHAR(150) NOT NULL,
     so_dien_thoai       VARCHAR(30) NOT NULL,
     email               VARCHAR(255) NULL,

@@ -217,7 +217,7 @@ DROP TABLE IF EXISTS `khach_hang`;
 CREATE TABLE `khach_hang` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `tai_khoan_id` bigint unsigned DEFAULT NULL,
-  `ma_khach_hang` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ma_khach_hang` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
   `ho_ten` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `so_dien_thoai` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,

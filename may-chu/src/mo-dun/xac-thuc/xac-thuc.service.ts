@@ -4,6 +4,10 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
+import {
+  taoMaKhachHangTam,
+  taoMaKhachHangTuId,
+} from '../../dung-chung/tien-ich/ma-khach-hang';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import type { NguoiDungXacThuc } from '../../dung-chung/types/nguoi-dung-xac-thuc.type';
 import { DangNhapDto } from './dto/dang-nhap.dto';
@@ -83,7 +87,12 @@ export class XacThucService {
 
   async dangKy(dto: DangKyDto) {
     const tonTai = await this.prisma.tai_khoan.findFirst({
-      where: { ngay_xoa: null, OR: [{ email: dto.email }, { ten_dang_nhap: dto.email }] },
+      where: {
+        OR: [
+          { email: dto.email },
+          { ten_dang_nhap: dto.email },
+        ],
+      },
       select: { id: true },
     });
 
@@ -96,7 +105,22 @@ export class XacThucService {
     });
 
     if (khachCungSo?.tai_khoan_id) {
-      throw new LoiNghiepVuException('XAC_THUC_009', 'Số điện thoại đã gắn với tài khoản khác.', HttpStatus.CONFLICT);
+      throw new LoiNghiepVuException(
+        'XAC_THUC_009',
+        'Số điện thoại đã gắn với tài khoản khác.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    if (
+      khachCungSo &&
+      khachCungSo.trang_thai !== 'HOAT_DONG'
+    ) {
+      throw new LoiNghiepVuException(
+        'XAC_THUC_014',
+        'Khách hàng đang bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ nhà hàng.',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     const vaiTro = await this.prisma.vai_tro.findUnique({ where: { ma_vai_tro: 'KHACH_HANG' } });
@@ -123,13 +147,22 @@ export class XacThucService {
           data: { tai_khoan_id: moi.id, ho_ten: dto.hoTen, email: dto.email },
         });
       } else {
-        await tx.khach_hang.create({
+        const khachMoi = await tx.khach_hang.create({
           data: {
             tai_khoan_id: moi.id,
+            ma_khach_hang: taoMaKhachHangTam(),
             ho_ten: dto.hoTen,
             so_dien_thoai: dto.soDienThoai,
             email: dto.email,
             trang_thai: 'HOAT_DONG',
+          },
+        });
+
+        await tx.khach_hang.update({
+          where: { id: khachMoi.id },
+          data: {
+            ma_khach_hang:
+              taoMaKhachHangTuId(khachMoi.id),
           },
         });
       }

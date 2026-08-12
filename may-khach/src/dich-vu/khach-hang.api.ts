@@ -2,6 +2,7 @@ import { goiApi } from './http';
 
 export interface HoSoKhachHang {
   id: string;
+  maKhachHang: string;
   hoTen: string;
   soDienThoai: string;
   email?: string | null;

@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '../generated/prisma/client';
+import {
+  taoMaKhachHangTuId,
+} from '../src/dung-chung/tien-ich/ma-khach-hang';
 
 const XAC_NHAN = 'DEMO_SEED_CONFIRM';
 const MOT_NGAY_MS = 86_400_000;
@@ -443,30 +446,64 @@ async function main(): Promise<void> {
     const khachIds: bigint[] = [];
 
     for (let i = 0; i < khachData.length; i += 1) {
-      const [ma, hoTen, soDienThoai, email, gioiTinh] = khachData[i];
+      const [_maDemo, hoTen, soDienThoai, email, gioiTinh] =
+        khachData[i];
+
       const row = await prisma.khach_hang.upsert({
-        where: { so_dien_thoai: soDienThoai },
+        where: {
+          so_dien_thoai: soDienThoai,
+        },
         create: {
-          ma_khach_hang: ma,
+          ma_khach_hang:
+            `TMP_DEMO_KH_${String(i + 1).padStart(2, '0')}`,
           ho_ten: hoTen,
           so_dien_thoai: soDienThoai,
           email,
           gioi_tinh: gioiTinh,
-          ghi_chu: 'Khách hàng dữ liệu trình diễn',
+          ghi_chu:
+            'Khách hàng dữ liệu trình diễn',
           trang_thai: 'HOAT_DONG',
-          ngay_tao: new Date(Date.now() - (i + 2) * MOT_NGAY_MS),
+          ngay_tao:
+            new Date(
+              Date.now() -
+                (i + 2) *
+                  MOT_NGAY_MS,
+            ),
         },
         update: {
-          ma_khach_hang: ma,
           ho_ten: hoTen,
           email,
           gioi_tinh: gioiTinh,
-          ghi_chu: 'Khách hàng dữ liệu trình diễn',
+          ghi_chu:
+            'Khách hàng dữ liệu trình diễn',
           trang_thai: 'HOAT_DONG',
           ngay_xoa: null,
-          ngay_tao: new Date(Date.now() - (i + 2) * MOT_NGAY_MS),
+          ngay_tao:
+            new Date(
+              Date.now() -
+                (i + 2) *
+                  MOT_NGAY_MS,
+            ),
         },
       });
+
+      const maKhachHang =
+        taoMaKhachHangTuId(row.id);
+
+      if (
+        row.ma_khach_hang !==
+        maKhachHang
+      ) {
+        await prisma.khach_hang.update({
+          where: {
+            id: row.id,
+          },
+          data: {
+            ma_khach_hang:
+              maKhachHang,
+          },
+        });
+      }
 
       khachIds.push(row.id);
     }

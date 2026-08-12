@@ -244,7 +244,7 @@ export function QuanTriKhachHang() {
               dataIndex: 'maKhachHang',
               width: 120,
               fixed: 'left',
-              render: (v: string | null) => <strong>{v || '—'}</strong>,
+              render: (v: string) => <strong>{v}</strong>,
             },
             {
               title: 'Họ tên',
@@ -354,7 +354,7 @@ export function QuanTriKhachHang() {
       <Modal
         className="admin-form-modal"
         open={Boolean(dangSua)}
-        title={dangSua ? `Sửa khách hàng ${dangSua.maKhachHang || ''}`.trim() : 'Sửa khách hàng'}
+        title={dangSua ? `Sửa khách hàng ${dangSua.maKhachHang}` : 'Sửa khách hàng'}
         okText="Lưu"
         cancelText="Đóng"
         confirmLoading={suaMutation.isPending}

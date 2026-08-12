@@ -4,6 +4,10 @@ import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
 import { ngayGioSql } from '../../dung-chung/tien-ich/ngay-gio';
+import {
+  taoMaKhachHangTam,
+  taoMaKhachHangTuId,
+} from '../../dung-chung/tien-ich/ma-khach-hang';
 import type { NguoiDungXacThuc } from '../../dung-chung/types/nguoi-dung-xac-thuc.type';
 import { CauHinhService } from '../cau-hinh/cau-hinh.service';
 import { LichPhucVuService } from '../ban-an/lich-phuc-vu.service';
@@ -97,20 +101,73 @@ export class DatBanService {
         throw new LoiNghiepVuException('DAT_BAN_019', 'Bàn đã chọn không thuộc khu vực yêu cầu.', HttpStatus.UNPROCESSABLE_ENTITY);
       }
 
-      const khach = await tx.khach_hang.upsert({
-        where: { so_dien_thoai: input.soDienThoai },
-        update: {},
-        create: {
-          ho_ten: input.hoTen,
-          so_dien_thoai: input.soDienThoai,
-          email: input.email ?? null,
-          trang_thai: 'HOAT_DONG',
-        },
-      });
-      if (khach.trang_thai === 'BI_KHOA') {
-        throw new LoiNghiepVuException('KHACH_HANG_003', 'Khách hàng đang bị khóa.', HttpStatus.FORBIDDEN);
+      const soDienThoai =
+        input.soDienThoai.trim();
+
+      let khach =
+        await tx.khach_hang.findUnique({
+          where: {
+            so_dien_thoai: soDienThoai,
+          },
+        });
+
+      if (!khach) {
+        const khachMoi =
+          await tx.khach_hang.create({
+            data: {
+              ma_khach_hang:
+                taoMaKhachHangTam(),
+              ho_ten: input.hoTen.trim(),
+              so_dien_thoai: soDienThoai,
+              email:
+                input.email?.trim() ||
+                null,
+              trang_thai: 'HOAT_DONG',
+            },
+          });
+
+        khach =
+          await tx.khach_hang.update({
+            where: {
+              id: khachMoi.id,
+            },
+            data: {
+              ma_khach_hang:
+                taoMaKhachHangTuId(
+                  khachMoi.id,
+                ),
+            },
+          });
+      } else if (khach.ngay_xoa) {
+        khach =
+          await tx.khach_hang.update({
+            where: {
+              id: khach.id,
+            },
+            data: {
+              ho_ten:
+                input.hoTen.trim(),
+              email:
+                input.email?.trim() ||
+                null,
+              trang_thai: 'HOAT_DONG',
+              ngay_xoa: null,
+            },
+          });
       }
-      const khachHangId: bigint | null = khach.ngay_xoa ? null : khach.id;
+
+      if (
+        khach.trang_thai !==
+        'HOAT_DONG'
+      ) {
+        throw new LoiNghiepVuException(
+          'KHACH_HANG_004',
+          'Khách hàng đang bị khóa hoặc ngừng hoạt động.',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      const khachHangId = khach.id;
 
       let nhanVienId: bigint | null = null;
       if (input.xacNhanNgay && input.taiKhoanThucHienId) {

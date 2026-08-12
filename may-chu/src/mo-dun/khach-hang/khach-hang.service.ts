@@ -18,23 +18,7 @@ export class KhachHangService {
     private readonly nhatKy: NhatKyService,
   ) {}
 
-  /**
-   * Dữ liệu cũ có thể chưa có mã khách vì cột ma_khach_hang cho phép NULL
-   * và các luồng tạo khách trước đây không gán mã. Gán mã ổn định theo ID
-   * để khách cũ + khách mới đều có mã quản trị có thể tìm kiếm.
-   */
-  private async damBaoMaKhachHang() {
-    await this.prisma.$executeRawUnsafe(
-      `UPDATE khach_hang
-       SET ma_khach_hang = CONCAT('KH', LPAD(id, 8, '0'))
-       WHERE ngay_xoa IS NULL
-         AND (ma_khach_hang IS NULL OR TRIM(ma_khach_hang) = '')`,
-    );
-  }
-
-
   async hoSoCuaToi(taiKhoanIdChuoi: string) {
-    await this.damBaoMaKhachHang();
     const rows = await this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
       `SELECT kh.id, kh.ma_khach_hang, kh.ho_ten, kh.so_dien_thoai, kh.email,
               DATE_FORMAT(kh.ngay_sinh, '%Y-%m-%d') AS ngay_sinh, kh.gioi_tinh,
@@ -86,7 +70,6 @@ export class KhachHangService {
   }
 
   async danhSach(dto: DanhSachKhachHangDto) {
-    await this.damBaoMaKhachHang();
     const dieuKien: string[] = ['kh.ngay_xoa IS NULL'];
     const thamSo: unknown[] = [];
 
@@ -143,7 +126,6 @@ export class KhachHangService {
   }
 
   async chiTiet(id: string) {
-    await this.damBaoMaKhachHang();
     const khachHangId = bigintTuChuoi(id, 'ID khách hàng');
     const rows = await this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
       `SELECT

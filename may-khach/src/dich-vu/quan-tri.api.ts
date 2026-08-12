@@ -55,7 +55,7 @@ export interface LienKetBanQuanTri {
 
 export interface KhachHangQuanTri {
   id: string;
-  maKhachHang?: string | null;
+  maKhachHang: string;
   taiKhoanId?: string | null;
   hoTen: string;
   soDienThoai: string;
@@ -301,7 +301,7 @@ export const quanTriApi = {
     goiApi<MonAn>(`/quan-tri/mon-an/${id}/hinh-anh/${hinhId}`, { method: 'DELETE', xacThuc: true }),
 
   khachHang: (p: Record<string, string | number | undefined> = {}) =>
-    goiApi<DanhSachPhanTrang<KhachHangQuanTri>>(`/quan-tri/khach-hang${taoQuery({ trang: 1, kichThuoc: 100, ...p })}`, { xacThuc: true }),
+    goiApi<DanhSachPhanTrang<KhachHangQuanTri>>(`/quan-tri/khach-hang${taoQuery({ trang: 1, kichThuoc: 20, ...p })}`, { xacThuc: true }),
   khachHangChiTiet: (id: string) =>
     goiApi<KhachHangQuanTri>(`/quan-tri/khach-hang/${id}`, { xacThuc: true }),
   capNhatKhachHang: (id: string, duLieu: KhachHangPayload) =>
