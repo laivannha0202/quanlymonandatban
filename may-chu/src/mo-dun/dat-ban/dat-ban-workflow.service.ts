@@ -221,6 +221,31 @@ export class DatBanWorkflowService {
 
       const datBan = await this.repository.khoaDatBan(tx, datBanId);
       if (!datBan) throw new LoiNghiepVuException('DAT_BAN_001', 'Đặt bàn không tồn tại.', HttpStatus.NOT_FOUND);
+
+      if (canKhoaBan) {
+        // Có thể có request sắp bàn chạy song song sau lúc đọc banIds.
+        // Sau khi khóa booking, đọc lại mapping; nếu đã đổi thì dừng và
+        // yêu cầu client thử lại thay vì cập nhật nhầm trạng thái bàn cũ.
+        const banHienTai = await tx.chi_tiet_dat_ban.findMany({
+          where: { dat_ban_id: datBanId },
+          orderBy: { ban_an_id: 'asc' },
+          select: { ban_an_id: true },
+        });
+        const banIdsHienTai = banHienTai.map((x) => x.ban_an_id);
+        const banIdsDaKhoa = banDaKhoa.map((x) => x.id);
+        const mappingKhongConKhop =
+          banIdsHienTai.length !== banIdsDaKhoa.length ||
+          banIdsHienTai.some((id, index) => id !== banIdsDaKhoa[index]);
+
+        if (mappingKhongConKhop) {
+          throw new LoiNghiepVuException(
+            'DAT_BAN_020',
+            'Danh sách bàn vừa được thay đổi bởi thao tác khác. Vui lòng thử lại.',
+            HttpStatus.CONFLICT,
+          );
+        }
+      }
+
       const hopLe = coTheChuyenTrangThai(datBan.trang_thai, trangThaiMoi);
       if (!hopLe) {
         throw new LoiNghiepVuException('DAT_BAN_008', `Không thể chuyển từ ${datBan.trang_thai} sang ${trangThaiMoi}.`, HttpStatus.CONFLICT);
