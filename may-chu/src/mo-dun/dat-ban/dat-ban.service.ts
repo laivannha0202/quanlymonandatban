@@ -119,35 +119,83 @@ export class DatBanService {
         nhanVienId = nhanVien?.id ?? null;
       }
 
-      const tam = `TMP-${randomUUID()}`;
-      const trangThai = input.xacNhanNgay ? 'DA_XAC_NHAN' : 'CHO_XAC_NHAN';
-      await tx.$executeRawUnsafe(
-        `INSERT INTO dat_ban
-         (ma_dat_ban, khach_hang_id, khu_vuc_id, ho_ten, so_dien_thoai, email, ngay_dat,
-          gio_bat_dau, gio_ket_thuc, so_nguoi, trang_thai, nguon_dat, kieu_xep_ban,
-          ghi_chu_khach, ghi_chu_noi_bo, nguoi_xac_nhan_id, thoi_gian_xac_nhan)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${input.xacNhanNgay ? 'NOW(3)' : 'NULL'})`,
-        tam,
-        khachHangId,
-        ban[0].khu_vuc_id,
-        input.hoTen.trim(),
-        input.soDienThoai.trim(),
-        input.email?.trim() || null,
-        input.ngay,
-        gioBatDauSql,
-        gioKetThucSql,
-        input.soNguoi,
-        trangThai,
-        input.nguonDat,
-        input.banAnIds?.length ? (input.laQuanTri ? 'NHAN_VIEN_SAP_XEP' : 'KHACH_CHON_BAN') : 'HE_THONG_SAP_XEP',
-        input.ghiChu?.trim() || null,
-        input.ghiChuNoiBo?.trim() || null,
-        nhanVienId,
-      );
-      const [dongId] = await tx.$queryRawUnsafe<Array<{ id: bigint | number | string }>>('SELECT LAST_INSERT_ID() AS id');
-      const id = BigInt(String(dongId.id));
-      const maDatBan = `DB${input.ngay.replaceAll('-', '')}-${id.toString().padStart(6, '0')}`;
-      await tx.dat_ban.update({ where: { id }, data: { ma_dat_ban: maDatBan } });
+      const trangThai =
+        input.xacNhanNgay
+          ? 'DA_XAC_NHAN'
+          : 'CHO_XAC_NHAN';
+
+      const kieuXepBan =
+        input.banAnIds?.length
+          ? input.laQuanTri
+            ? 'NHAN_VIEN_SAP_XEP'
+            : 'KHACH_CHON_BAN'
+          : 'HE_THONG_SAP_XEP';
+
+      const datBanMoi =
+        await tx.dat_ban.create({
+          data: {
+            ma_dat_ban:
+              `TMP-${randomUUID()}`,
+            khach_hang_id:
+              khachHangId,
+            khu_vuc_id:
+              ban[0].khu_vuc_id,
+            ho_ten:
+              input.hoTen.trim(),
+            so_dien_thoai:
+              input.soDienThoai.trim(),
+            email:
+              input.email?.trim() ||
+              null,
+            ngay_dat:
+              new Date(
+                `${input.ngay}T00:00:00.000Z`,
+              ),
+            gio_bat_dau:
+              new Date(
+                `${input.ngay}T${input.gioBatDau}:00.000Z`,
+              ),
+            gio_ket_thuc:
+              new Date(
+                `${input.ngay}T${gioKetThuc}:00.000Z`,
+              ),
+            so_nguoi:
+              input.soNguoi,
+            trang_thai:
+              trangThai,
+            nguon_dat:
+              input.nguonDat,
+            kieu_xep_ban:
+              kieuXepBan,
+            ghi_chu_khach:
+              input.ghiChu?.trim() ||
+              null,
+            ghi_chu_noi_bo:
+              input.ghiChuNoiBo?.trim() ||
+              null,
+            nguoi_xac_nhan_id:
+              nhanVienId,
+            thoi_gian_xac_nhan:
+              input.xacNhanNgay
+                ? new Date()
+                : null,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+      const id = datBanMoi.id;
+      const maDatBan =
+        `DB${input.ngay.replaceAll('-', '')}-` +
+        id.toString().padStart(6, '0');
+
+      await tx.dat_ban.update({
+        where: { id },
+        data: {
+          ma_dat_ban: maDatBan,
+        },
+      });
       await tx.chi_tiet_dat_ban.createMany({ data: ban.map((item) => ({ dat_ban_id: id, ban_an_id: item.id })) });
       await tx.lich_su_dat_ban.create({
         data: {
