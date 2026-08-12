@@ -106,6 +106,51 @@ export class BanAnService {
       await this.kiemTraKhuVuc(khuVucId);
     }
 
+    const doiKhuVuc =
+      dto.khuVucId !== undefined &&
+      khuVucId !== ban.khu_vuc_id;
+    const doiSucChua =
+      (dto.sucChua !== undefined &&
+        dto.sucChua !== ban.suc_chua) ||
+      (dto.sucChuaToiDa !== undefined &&
+        dto.sucChuaToiDa !== ban.suc_chua_toi_da);
+    const ngungPhucVu =
+      dto.trangThai !== undefined &&
+      dto.trangThai !== ban.trang_thai &&
+      ['BAO_TRI', 'NGUNG_SU_DUNG'].includes(dto.trangThai);
+
+    if (doiKhuVuc || doiSucChua || ngungPhucVu) {
+      const soLichConHieuLuc =
+        await this.demLichDatConHieuLuc(ban.id);
+
+      if (soLichConHieuLuc > 0) {
+        throw new LoiNghiepVuException(
+          'BAN_AN_007',
+          'Không thể đổi khu vực, sức chứa hoặc ngừng phục vụ bàn khi còn lịch đặt hiệu lực.',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
+    if (doiKhuVuc) {
+      const soLienKet = await this.prisma.lien_ket_ban.count({
+        where: {
+          OR: [
+            { ban_1_id: ban.id },
+            { ban_2_id: ban.id },
+          ],
+        },
+      });
+
+      if (soLienKet > 0) {
+        throw new LoiNghiepVuException(
+          'BAN_AN_008',
+          'Bàn đang có liên kết ghép. Hãy xóa liên kết trước khi chuyển sang khu vực khác.',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
     return this.prisma.ban_an.update({
       where: { id: ban.id },
       data: {
@@ -123,21 +168,8 @@ export class BanAnService {
 
   async xoa(id: string) {
     const ban = await this.chiTiet(id);
-    const soLichConHieuLuc = await this.prisma.dat_ban.count({
-      where: {
-        trang_thai: {
-          in: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN'],
-        },
-        gio_ket_thuc: {
-          gt: hienTaiWallClockVietNam(),
-        },
-        chi_tiet_dat_ban: {
-          some: {
-            ban_an_id: ban.id,
-          },
-        },
-      },
-    });
+    const soLichConHieuLuc =
+      await this.demLichDatConHieuLuc(ban.id);
 
     if (soLichConHieuLuc > 0) {
       throw new LoiNghiepVuException(
@@ -175,6 +207,24 @@ export class BanAnService {
       ...kv,
       banAns: ban.filter((item) => item.khu_vuc_id === kv.id),
     }));
+  }
+
+  private demLichDatConHieuLuc(banId: bigint): Promise<number> {
+    return this.prisma.dat_ban.count({
+      where: {
+        trang_thai: {
+          in: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN'],
+        },
+        gio_ket_thuc: {
+          gt: hienTaiWallClockVietNam(),
+        },
+        chi_tiet_dat_ban: {
+          some: {
+            ban_an_id: banId,
+          },
+        },
+      },
+    });
   }
 
   private kiemTraTrangThaiQuanTri(trangThaiMoi?: string, trangThaiHienTai?: string): void {
