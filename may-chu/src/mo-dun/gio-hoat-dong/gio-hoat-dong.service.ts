@@ -5,6 +5,9 @@ import {
   dateWallClockTuGio,
   gioThanhPhut,
   gioTuDateWallClock,
+  hienTaiWallClockVietNam,
+  ngayTuDateWallClock,
+  thuTrongTuan,
 } from '../../dung-chung/tien-ich/ngay-gio';
 import { CapNhatGioHoatDongDto } from './dto/cap-nhat-gio-hoat-dong.dto';
 
@@ -96,7 +99,21 @@ export class GioHoatDongService {
       );
     }
 
+    const cacThuThayDoi = new Set<number>();
+
     for (const item of dto.danhSach) {
+      const key = `${item.thuTrongTuan}-${item.caSo}`;
+      const cu = banDo.get(key);
+      const hoatDongMoi = item.hoatDong !== false;
+      if (
+        !cu ||
+        cu.gioMoCua !== item.gioMoCua ||
+        cu.gioDongCua !== item.gioDongCua ||
+        cu.hoatDong !== hoatDongMoi
+      ) {
+        cacThuThayDoi.add(item.thuTrongTuan);
+      }
+
       banDo.set(
         `${item.thuTrongTuan}-${item.caSo}`,
         {
@@ -161,6 +178,11 @@ export class GioHoatDongService {
       }
     }
 
+    await this.damBaoBookingTuongLaiVanHopLe(
+      [...banDo.values()],
+      cacThuThayDoi,
+    );
+
     await this.prisma.$transaction(async (tx) => {
       for (const item of dto.danhSach) {
         const duLieu = {
@@ -190,6 +212,82 @@ export class GioHoatDongService {
     return this.danhSach();
   }
 
+  private async damBaoBookingTuongLaiVanHopLe(
+    lich: Array<{
+      thuTrongTuan: number;
+      caSo: number;
+      gioMoCua: string;
+      gioDongCua: string;
+      hoatDong: boolean;
+    }>,
+    cacThuThayDoi: Set<number>,
+  ): Promise<void> {
+    if (!cacThuThayDoi.size) return;
+
+    const [bookings, ngayDacBiet] = await Promise.all([
+      this.prisma.dat_ban.findMany({
+        where: {
+          trang_thai: {
+            in: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN'],
+          },
+          gio_bat_dau: {
+            gt: hienTaiWallClockVietNam(),
+          },
+        },
+        select: {
+          id: true,
+          ngay_dat: true,
+          gio_bat_dau: true,
+          gio_ket_thuc: true,
+        },
+      }),
+      this.prisma.ngay_nghi_dac_biet.findMany({
+        select: {
+          ngay: true,
+        },
+      }),
+    ]);
+
+    const ngayCoCauHinhRieng = new Set(
+      ngayDacBiet.map((item) => ngayTuDateWallClock(item.ngay)),
+    );
+
+    for (const booking of bookings) {
+      const ngay = ngayTuDateWallClock(booking.ngay_dat);
+      const thu = thuTrongTuan(ngay);
+
+      if (
+        !cacThuThayDoi.has(thu) ||
+        ngayCoCauHinhRieng.has(ngay)
+      ) {
+        continue;
+      }
+
+      const batDau = gioThanhPhut(
+        gioTuDateWallClock(booking.gio_bat_dau),
+      );
+      const ketThuc = gioThanhPhut(
+        gioTuDateWallClock(booking.gio_ket_thuc),
+      );
+
+      const conDuocPhucVu = lich.some((item) => {
+        if (!item.hoatDong || item.thuTrongTuan !== thu) return false;
+        return (
+          batDau >= gioThanhPhut(item.gioMoCua) &&
+          ketThuc <= gioThanhPhut(item.gioDongCua)
+        );
+      });
+
+      if (!conDuocPhucVu) {
+        throw new LoiNghiepVuException(
+          'GIO_HOAT_DONG_005',
+          `Thay đổi lịch tuần sẽ làm đặt bàn ${booking.id.toString()} nằm ngoài thời gian phục vụ.`,
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+  }
+
   private toView(row: {
     id: bigint;
     thu_trong_tuan: number;
@@ -211,16 +309,49 @@ export class GioHoatDongService {
   }
 
   async xoa(thu: number, caSo: number) {
-    const ketQua = await this.prisma.gio_hoat_dong.deleteMany({
-      where: { thu_trong_tuan: thu, ca_so: caSo },
-    });
-    if (!ketQua.count) {
+    const hienTai = await this.danhSach();
+    const tonTai = hienTai.some(
+      (item) =>
+        Number(item.thu_trong_tuan) === thu &&
+        Number(item.ca_so) === caSo,
+    );
+
+    if (!tonTai) {
       throw new LoiNghiepVuException(
         'GIO_HOAT_DONG_003',
         'Không tìm thấy ca hoạt động.',
         HttpStatus.NOT_FOUND,
       );
     }
+
+    const lichSauKhiXoa = hienTai
+      .filter(
+        (item) =>
+          !(
+            Number(item.thu_trong_tuan) === thu &&
+            Number(item.ca_so) === caSo
+          ),
+      )
+      .map((item) => ({
+        thuTrongTuan: Number(item.thu_trong_tuan),
+        caSo: Number(item.ca_so),
+        gioMoCua: item.gio_mo_cua,
+        gioDongCua: item.gio_dong_cua,
+        hoatDong: Boolean(item.hoat_dong),
+      }));
+
+    await this.damBaoBookingTuongLaiVanHopLe(
+      lichSauKhiXoa,
+      new Set([thu]),
+    );
+
+    await this.prisma.gio_hoat_dong.deleteMany({
+      where: {
+        thu_trong_tuan: thu,
+        ca_so: caSo,
+      },
+    });
+
     return { daXoa: true };
   }
 }

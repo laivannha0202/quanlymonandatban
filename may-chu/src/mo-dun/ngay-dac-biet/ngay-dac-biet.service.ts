@@ -6,8 +6,10 @@ import {
   dateWallClockTuNgay,
   gioThanhPhut,
   gioTuDateWallClock,
+  hienTaiWallClockVietNam,
   laNgayHopLe,
   ngayTuDateWallClock,
+  thuTrongTuan,
 } from '../../dung-chung/tien-ich/ngay-gio';
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
 import { CapNhatNgayDacBietDto } from './dto/cap-nhat-ngay-dac-biet.dto';
@@ -73,6 +75,12 @@ export class NgayDacBietService {
       );
     }
 
+    await this.damBaoBookingNgayVanHopLe(dto.ngay, {
+      dongCuaCaNgay: dto.dongCuaCaNgay,
+      gioMoCua: dto.gioMoCua,
+      gioDongCua: dto.gioDongCua,
+    });
+
     const row = await this.prisma.ngay_nghi_dac_biet.create({
       data: {
         ngay: dateWallClockTuNgay(dto.ngay),
@@ -122,6 +130,15 @@ export class NgayDacBietService {
     };
     this.kiemTra(duLieu);
 
+    if (duLieu.ngay !== hienTai.ngay) {
+      await this.damBaoBookingNgayVanHopLe(hienTai.ngay, null);
+    }
+    await this.damBaoBookingNgayVanHopLe(duLieu.ngay, {
+      dongCuaCaNgay: duLieu.dongCuaCaNgay,
+      gioMoCua: duLieu.gioMoCua,
+      gioDongCua: duLieu.gioDongCua,
+    });
+
     const row = await this.prisma.ngay_nghi_dac_biet.update({
       where: {
         id: bigintTuChuoi(id, 'ID ngày đặc biệt'),
@@ -144,19 +161,103 @@ export class NgayDacBietService {
   }
 
   async xoa(id: string) {
-    const ketQua =
-      await this.prisma.ngay_nghi_dac_biet.deleteMany({
+    const hienTai = await this.layTheoId(id);
+    if (!hienTai) {
+      throw new LoiNghiepVuException(
+        'NGAY_DAC_BIET_004',
+        'Không tìm thấy ngày đặc biệt.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    await this.damBaoBookingNgayVanHopLe(hienTai.ngay, null);
+
+    await this.prisma.ngay_nghi_dac_biet.delete({
+      where: {
+        id: bigintTuChuoi(id, 'ID ngày đặc biệt'),
+      },
+    });
+
+    return { daXoa: true };
+  }
+
+  private async damBaoBookingNgayVanHopLe(
+    ngay: string,
+    cauHinh: {
+      dongCuaCaNgay: boolean;
+      gioMoCua?: string;
+      gioDongCua?: string;
+    } | null,
+  ): Promise<void> {
+    const bookings = await this.prisma.dat_ban.findMany({
+      where: {
+        ngay_dat: dateWallClockTuNgay(ngay),
+        trang_thai: {
+          in: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN'],
+        },
+        gio_bat_dau: {
+          gt: hienTaiWallClockVietNam(),
+        },
+      },
+      select: {
+        id: true,
+        gio_bat_dau: true,
+        gio_ket_thuc: true,
+      },
+    });
+
+    if (!bookings.length) return;
+
+    let cacKhoang: Array<{ mo: number; dong: number }> = [];
+
+    if (cauHinh) {
+      if (!cauHinh.dongCuaCaNgay) {
+        if (!cauHinh.gioMoCua || !cauHinh.gioDongCua) {
+          throw new LoiNghiepVuException(
+            'NGAY_DAC_BIET_006',
+            'Ngày mở cửa đặc biệt phải có giờ mở và giờ đóng.',
+          );
+        }
+        cacKhoang = [{
+          mo: gioThanhPhut(cauHinh.gioMoCua),
+          dong: gioThanhPhut(cauHinh.gioDongCua),
+        }];
+      }
+    } else {
+      const lichTuan = await this.prisma.gio_hoat_dong.findMany({
         where: {
-          id: bigintTuChuoi(
-            id,
-            'ID ngày đặc biệt',
-          ),
+          thu_trong_tuan: thuTrongTuan(ngay),
+          hoat_dong: true,
+        },
+        orderBy: {
+          ca_so: 'asc',
+        },
+        select: {
+          gio_mo_cua: true,
+          gio_dong_cua: true,
         },
       });
-    if (!ketQua.count) {
-      throw new LoiNghiepVuException('NGAY_DAC_BIET_004', 'Không tìm thấy ngày đặc biệt.', HttpStatus.NOT_FOUND);
+      cacKhoang = lichTuan.map((item) => ({
+        mo: gioThanhPhut(gioTuDateWallClock(item.gio_mo_cua)),
+        dong: gioThanhPhut(gioTuDateWallClock(item.gio_dong_cua)),
+      }));
     }
-    return { daXoa: true };
+
+    for (const booking of bookings) {
+      const batDau = gioThanhPhut(gioTuDateWallClock(booking.gio_bat_dau));
+      const ketThuc = gioThanhPhut(gioTuDateWallClock(booking.gio_ket_thuc));
+      const hopLe = cacKhoang.some(
+        (khoang) => batDau >= khoang.mo && ketThuc <= khoang.dong,
+      );
+
+      if (!hopLe) {
+        throw new LoiNghiepVuException(
+          'NGAY_DAC_BIET_008',
+          `Thay đổi ngày đặc biệt sẽ làm đặt bàn ${booking.id.toString()} nằm ngoài thời gian phục vụ.`,
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
   }
 
   private async layTheoId(id: string): Promise<NgayDacBietView | null> {

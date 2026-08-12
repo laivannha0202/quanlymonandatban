@@ -63,3 +63,79 @@ describe('NgayDacBietService - Prisma wall-clock', () => {
     expect(result.ngay).toBe('2026-09-03');
   });
 });
+
+
+describe('NgayDacBietService - invariant booking tương lai', () => {
+  it('chặn tạo ngày đóng cửa nếu đã có booking tương lai', async () => {
+    const prisma = {
+      ngay_nghi_dac_biet: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+      },
+      dat_ban: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 88n,
+            gio_bat_dau: new Date('2026-09-03T18:00:00.000Z'),
+            gio_ket_thuc: new Date('2026-09-03T19:30:00.000Z'),
+          },
+        ]),
+      },
+      gio_hoat_dong: {
+        findMany: jest.fn(),
+      },
+    } as any;
+
+    const service = new NgayDacBietService(prisma);
+
+    await expect(
+      service.tao({
+        ngay: '2026-09-03',
+        tenSuKien: 'Nghỉ đột xuất',
+        dongCuaCaNgay: true,
+      }),
+    ).rejects.toMatchObject({ maLoi: 'NGAY_DAC_BIET_008' });
+
+    expect(prisma.ngay_nghi_dac_biet.create).not.toHaveBeenCalled();
+  });
+
+  it('cho xóa ngày đặc biệt nếu lịch tuần vẫn bao phủ booking', async () => {
+    const prisma = {
+      ngay_nghi_dac_biet: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 2n,
+          ngay: new Date('2026-08-17T00:00:00.000Z'),
+          ten_su_kien: 'Mở muộn',
+          dong_cua_ca_ngay: false,
+          gio_mo_cua: new Date('1970-01-01T12:00:00.000Z'),
+          gio_dong_cua: new Date('1970-01-01T20:00:00.000Z'),
+          ghi_chu: null,
+        }),
+        delete: jest.fn().mockResolvedValue({ id: 2n }),
+      },
+      dat_ban: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 89n,
+            gio_bat_dau: new Date('2026-08-17T13:00:00.000Z'),
+            gio_ket_thuc: new Date('2026-08-17T14:30:00.000Z'),
+          },
+        ]),
+      },
+      gio_hoat_dong: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            gio_mo_cua: new Date('1970-01-01T10:00:00.000Z'),
+            gio_dong_cua: new Date('1970-01-01T22:00:00.000Z'),
+          },
+        ]),
+      },
+    } as any;
+
+    const service = new NgayDacBietService(prisma);
+    await expect(service.xoa('2')).resolves.toEqual({ daXoa: true });
+    expect(prisma.ngay_nghi_dac_biet.delete).toHaveBeenCalledWith({
+      where: { id: 2n },
+    });
+  });
+});
