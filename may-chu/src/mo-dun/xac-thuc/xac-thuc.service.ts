@@ -4,12 +4,9 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
-import {
-  taoMaKhachHangTam,
-  taoMaKhachHangTuId,
-} from '../../dung-chung/tien-ich/ma-khach-hang';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import type { NguoiDungXacThuc } from '../../dung-chung/types/nguoi-dung-xac-thuc.type';
+import { KhachHangLifecycleService } from '../khach-hang/khach-hang-lifecycle.service';
 import { DangNhapDto } from './dto/dang-nhap.dto';
 import { DangKyDto } from './dto/dang-ky.dto';
 import { DatLaiMatKhauDto } from './dto/dat-lai-mat-khau.dto';
@@ -35,6 +32,7 @@ export class XacThucService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly khachHangLifecycle: KhachHangLifecycleService,
   ) {}
 
   async dangNhap(dto: DangNhapDto) {
@@ -100,29 +98,6 @@ export class XacThucService {
       throw new LoiNghiepVuException('XAC_THUC_008', 'Email đã được sử dụng.', HttpStatus.CONFLICT);
     }
 
-    const khachCungSo = await this.prisma.khach_hang.findFirst({
-      where: { so_dien_thoai: dto.soDienThoai, ngay_xoa: null },
-    });
-
-    if (khachCungSo?.tai_khoan_id) {
-      throw new LoiNghiepVuException(
-        'XAC_THUC_009',
-        'Số điện thoại đã gắn với tài khoản khác.',
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    if (
-      khachCungSo &&
-      khachCungSo.trang_thai !== 'HOAT_DONG'
-    ) {
-      throw new LoiNghiepVuException(
-        'XAC_THUC_014',
-        'Khách hàng đang bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ nhà hàng.',
-        HttpStatus.FORBIDDEN,
-      );
-    }
-
     const vaiTro = await this.prisma.vai_tro.findUnique({ where: { ma_vai_tro: 'KHACH_HANG' } });
     if (!vaiTro) {
       throw new LoiNghiepVuException('HE_THONG_001', 'Thiếu vai trò KHACH_HANG trong hệ thống.', HttpStatus.INTERNAL_SERVER_ERROR);
@@ -141,31 +116,15 @@ export class XacThucService {
         },
       });
 
-      if (khachCungSo) {
-        await tx.khach_hang.update({
-          where: { id: khachCungSo.id },
-          data: { tai_khoan_id: moi.id, ho_ten: dto.hoTen, email: dto.email },
-        });
-      } else {
-        const khachMoi = await tx.khach_hang.create({
-          data: {
-            tai_khoan_id: moi.id,
-            ma_khach_hang: taoMaKhachHangTam(),
-            ho_ten: dto.hoTen,
-            so_dien_thoai: dto.soDienThoai,
-            email: dto.email,
-            trang_thai: 'HOAT_DONG',
-          },
-        });
-
-        await tx.khach_hang.update({
-          where: { id: khachMoi.id },
-          data: {
-            ma_khach_hang:
-              taoMaKhachHangTuId(khachMoi.id),
-          },
-        });
-      }
+      await this.khachHangLifecycle.ganTaiKhoanKhiDangKy(
+        tx,
+        {
+          taiKhoanId: moi.id,
+          hoTen: dto.hoTen,
+          soDienThoai: dto.soDienThoai,
+          email: dto.email,
+        },
+      );
 
       return moi;
     });
