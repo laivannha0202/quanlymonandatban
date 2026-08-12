@@ -136,6 +136,8 @@ export const heThongApi = {
   docThongBao: (id: string) => goiApi<{ daDoc: boolean }>(`/thong-bao/${id}/da-doc`, { method: 'PATCH', xacThuc: true }),
   docTatCaThongBao: () => goiApi<{ soThongBaoDaDoc: number }>('/thong-bao/doc-tat-ca', { method: 'PATCH', xacThuc: true }),
 
+  danhGiaCuaToi: (trang = 1, kichThuoc = 100) =>
+    goiApi<DanhSachPhanTrang<DanhGia>>(`/khach-hang/danh-gia${taoQuery({ trang, kichThuoc })}`, { xacThuc: true }),
   taoDanhGia: (duLieu: { datBanId: string; soSao: number; noiDung?: string }) =>
     goiApi<DanhGia>('/khach-hang/danh-gia', { method: 'POST', xacThuc: true, body: JSON.stringify(duLieu) }),
   capNhatDanhGia: (id: string, duLieu: { soSao?: number; noiDung?: string }) =>

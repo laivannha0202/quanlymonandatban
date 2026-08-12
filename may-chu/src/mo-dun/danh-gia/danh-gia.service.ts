@@ -47,6 +47,56 @@ export class DanhGiaService {
     return this.danhSachNoiBo(dto, false);
   }
 
+  async danhSachCuaKhach(
+    dto: DanhSachDanhGiaDto,
+    nguoiDung: NguoiDungXacThuc,
+  ) {
+    const taiKhoanId = bigintTuChuoi(
+      nguoiDung.taiKhoanId,
+      'ID tài khoản',
+    );
+
+    const where: Prisma.danh_giaWhereInput = {
+      ngay_xoa: null,
+      khach_hang: {
+        tai_khoan_id: taiKhoanId,
+        ngay_xoa: null,
+      },
+      ...(dto.soSao !== undefined
+        ? { so_sao: dto.soSao }
+        : {}),
+    };
+
+    const skip = (dto.trang - 1) * dto.kichThuoc;
+
+    const [rows, tong] = await Promise.all([
+      this.prisma.danh_gia.findMany({
+        where,
+        orderBy: {
+          ngay_tao: 'desc',
+        },
+        skip,
+        take: dto.kichThuoc,
+        include: KEM_THONG_TIN_DANH_GIA,
+      }),
+      this.prisma.danh_gia.count({ where }),
+    ]);
+
+    return {
+      danhSach: rows.map((row) =>
+        this.toView(row),
+      ),
+      phanTrang: {
+        trang: dto.trang,
+        kichThuoc: dto.kichThuoc,
+        tong,
+        tongTrang: Math.ceil(
+          tong / dto.kichThuoc,
+        ),
+      },
+    };
+  }
+
   private async danhSachNoiBo(
     dto: DanhSachDanhGiaDto,
     congKhai: boolean,

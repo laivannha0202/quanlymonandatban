@@ -26,6 +26,7 @@ export class DanhGiaCongKhaiController {
 @Controller('khach-hang/danh-gia')
 export class DanhGiaKhachHangController {
   constructor(private readonly service: DanhGiaService) {}
+  @Get() danhSach(@Query() dto: DanhSachDanhGiaDto, @NguoiDungHienTai() u: NguoiDungXacThuc) { return this.service.danhSachCuaKhach(dto, u); }
   @Post() tao(@Body() dto: TaoDanhGiaDto, @NguoiDungHienTai() u: NguoiDungXacThuc) { return this.service.taoCuaKhach(dto, u); }
   @Patch(':id') capNhat(@Param('id') id: string, @Body() dto: CapNhatDanhGiaDto, @NguoiDungHienTai() u: NguoiDungXacThuc) { return this.service.capNhatCuaKhach(id, dto, u); }
   @Delete(':id') xoa(@Param('id') id: string, @NguoiDungHienTai() u: NguoiDungXacThuc) { return this.service.xoaCuaKhach(id, u); }

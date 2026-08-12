@@ -71,6 +71,46 @@ describe('DanhGiaService - Prisma lifecycle', () => {
       );
   });
 
+  it('danh sách của tôi chỉ lấy review thuộc tài khoản hiện tại', async () => {
+    const prisma = {
+      danh_gia: {
+        findMany: jest.fn().mockResolvedValue([
+          baseRow,
+        ]),
+        count: jest.fn().mockResolvedValue(1),
+      },
+    } as any;
+
+    const service = new DanhGiaService(
+      prisma,
+      {} as any,
+    );
+
+    const result =
+      await service.danhSachCuaKhach(
+        {
+          trang: 1,
+          kichThuoc: 30,
+        } as any,
+        khachUser,
+      );
+
+    expect(result.danhSach).toHaveLength(1);
+
+    expect(prisma.danh_gia.findMany)
+      .toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            ngay_xoa: null,
+            khach_hang: {
+              tai_khoan_id: 10n,
+              ngay_xoa: null,
+            },
+          },
+        }),
+      );
+  });
+
   it('chỉ cho tạo đánh giá khi booking thuộc khách và đã hoàn thành', async () => {
     const prisma = {
       khach_hang: {
