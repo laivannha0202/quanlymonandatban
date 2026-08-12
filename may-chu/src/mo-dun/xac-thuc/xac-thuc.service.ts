@@ -18,11 +18,6 @@ interface RefreshPayload {
   loai: 'refresh';
 }
 
-interface TokenDatLaiHopLe {
-  id: bigint;
-  tai_khoan_id: bigint;
-}
-
 @Injectable()
 export class XacThucService {
   private readonly soLanSaiToiDa = 5;
@@ -214,19 +209,27 @@ export class XacThucService {
     const hetHanLuc = new Date(Date.now() + Math.max(5, soPhut) * 60_000);
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(
-        `UPDATE token_dat_lai_mat_khau
-         SET da_su_dung = 1, ngay_su_dung = COALESCE(ngay_su_dung, NOW(3))
-         WHERE tai_khoan_id = ? AND da_su_dung = 0`,
-        taiKhoan.id,
-      );
-      await tx.$executeRawUnsafe(
-        `INSERT INTO token_dat_lai_mat_khau (tai_khoan_id, token_hash, het_han_luc, da_su_dung)
-         VALUES (?, ?, ?, 0)`,
-        taiKhoan.id,
-        tokenHash,
-        hetHanLuc,
-      );
+      const thoiDiemHienTai = new Date();
+
+      await tx.token_dat_lai_mat_khau.updateMany({
+        where: {
+          tai_khoan_id: taiKhoan.id,
+          da_su_dung: false,
+        },
+        data: {
+          da_su_dung: true,
+          ngay_su_dung: thoiDiemHienTai,
+        },
+      });
+
+      await tx.token_dat_lai_mat_khau.create({
+        data: {
+          tai_khoan_id: taiKhoan.id,
+          token_hash: tokenHash,
+          het_han_luc: hetHanLuc,
+          da_su_dung: false,
+        },
+      });
     });
 
     return {
@@ -243,20 +246,35 @@ export class XacThucService {
 
     await this.prisma.$transaction(async (tx) => {
       const thoiDiemHienTai = new Date();
-      const rows = await tx.$queryRawUnsafe<TokenDatLaiHopLe[]>(
-        `SELECT id, tai_khoan_id
-         FROM token_dat_lai_mat_khau
-         WHERE token_hash = ? AND da_su_dung = 0 AND het_han_luc > ?
-         LIMIT 1 FOR UPDATE`,
-        tokenHash,
-        thoiDiemHienTai,
-      );
-      const token = rows[0];
-      if (!token) {
-        throw new LoiNghiepVuException('XAC_THUC_013', 'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.', HttpStatus.UNAUTHORIZED);
+      const token = await tx.token_dat_lai_mat_khau.findUnique({
+        where: {
+          token_hash: tokenHash,
+        },
+        select: {
+          id: true,
+          tai_khoan_id: true,
+          da_su_dung: true,
+          het_han_luc: true,
+        },
+      });
+
+      if (
+        !token ||
+        token.da_su_dung ||
+        token.het_han_luc <= thoiDiemHienTai
+      ) {
+        throw new LoiNghiepVuException(
+          'XAC_THUC_013',
+          'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
+          HttpStatus.UNAUTHORIZED,
+        );
       }
 
-      const taiKhoan = await tx.tai_khoan.findUnique({ where: { id: token.tai_khoan_id } });
+      const taiKhoan = await tx.tai_khoan.findUnique({
+        where: {
+          id: token.tai_khoan_id,
+        },
+      });
       if (!taiKhoan || taiKhoan.ngay_xoa || taiKhoan.trang_thai !== 'HOAT_DONG') {
         throw new LoiNghiepVuException('XAC_THUC_013', 'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.', HttpStatus.UNAUTHORIZED);
       }
@@ -265,8 +283,33 @@ export class XacThucService {
         throw new LoiNghiepVuException('XAC_THUC_012', 'Mật khẩu mới phải khác mật khẩu hiện tại.', HttpStatus.UNPROCESSABLE_ENTITY);
       }
 
+      const tokenDaNhan =
+        await tx.token_dat_lai_mat_khau.updateMany({
+          where: {
+            id: token.id,
+            da_su_dung: false,
+            het_han_luc: {
+              gt: thoiDiemHienTai,
+            },
+          },
+          data: {
+            da_su_dung: true,
+            ngay_su_dung: thoiDiemHienTai,
+          },
+        });
+
+      if (tokenDaNhan.count !== 1) {
+        throw new LoiNghiepVuException(
+          'XAC_THUC_013',
+          'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
       await tx.tai_khoan.update({
-        where: { id: taiKhoan.id },
+        where: {
+          id: taiKhoan.id,
+        },
         data: {
           mat_khau: matKhauHash,
           bat_buoc_doi_mat_khau: false,
@@ -275,12 +318,17 @@ export class XacThucService {
           khoa_den: null,
         },
       });
-      await tx.$executeRawUnsafe(
-        `UPDATE token_dat_lai_mat_khau
-         SET da_su_dung = 1, ngay_su_dung = COALESCE(ngay_su_dung, NOW(3))
-         WHERE tai_khoan_id = ? AND da_su_dung = 0`,
-        taiKhoan.id,
-      );
+
+      await tx.token_dat_lai_mat_khau.updateMany({
+        where: {
+          tai_khoan_id: taiKhoan.id,
+          da_su_dung: false,
+        },
+        data: {
+          da_su_dung: true,
+          ngay_su_dung: thoiDiemHienTai,
+        },
+      });
     }, { timeout: 10_000 });
 
     return { thongBao: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.' };
