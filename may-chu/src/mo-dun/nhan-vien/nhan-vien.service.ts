@@ -1,8 +1,14 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import type { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
+import {
+  dateWallClockTuNgay,
+  laNgayHopLe,
+  ngayTuDateWallClock,
+} from '../../dung-chung/tien-ich/ngay-gio';
 import type { NguoiDungXacThuc } from '../../dung-chung/types/nguoi-dung-xac-thuc.type';
 import { NhatKyService } from '../nhat-ky/nhat-ky.service';
 import { CapNhatNhanVienDto } from './dto/cap-nhat-nhan-vien.dto';
@@ -10,8 +16,61 @@ import { CapNhatTrangThaiNhanVienDto } from './dto/cap-nhat-trang-thai-nhan-vien
 import { DanhSachNhanVienDto } from './dto/danh-sach-nhan-vien.dto';
 import { TaoNhanVienDto } from './dto/tao-nhan-vien.dto';
 
-interface TongSoDong { tong: bigint | number | string }
-interface IdDong { id: bigint }
+type NhanVienViewRow = {
+  id: bigint;
+  tai_khoan_id: bigint;
+  ma_nhan_vien: string;
+  ho_ten: string;
+  so_dien_thoai: string | null;
+  email: string | null;
+  ngay_vao_lam: Date | null;
+  ghi_chu: string | null;
+  trang_thai: string;
+  ngay_tao: Date;
+  ngay_cap_nhat: Date;
+  tai_khoan: {
+    ten_dang_nhap: string | null;
+    email: string;
+    trang_thai: string;
+    bat_buoc_doi_mat_khau: boolean;
+    lan_dang_nhap_cuoi: Date | null;
+    vai_tro: {
+      id: bigint;
+      ma_vai_tro: string;
+      ten_vai_tro: string;
+    };
+  };
+};
+
+const CHON_NHAN_VIEN = {
+  id: true,
+  tai_khoan_id: true,
+  ma_nhan_vien: true,
+  ho_ten: true,
+  so_dien_thoai: true,
+  email: true,
+  ngay_vao_lam: true,
+  ghi_chu: true,
+  trang_thai: true,
+  ngay_tao: true,
+  ngay_cap_nhat: true,
+  tai_khoan: {
+    select: {
+      ten_dang_nhap: true,
+      email: true,
+      trang_thai: true,
+      bat_buoc_doi_mat_khau: true,
+      lan_dang_nhap_cuoi: true,
+      vai_tro: {
+        select: {
+          id: true,
+          ma_vai_tro: true,
+          ten_vai_tro: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.nhan_vienSelect;
 
 @Injectable()
 export class NhanVienService {
@@ -21,139 +80,180 @@ export class NhanVienService {
   ) {}
 
   async danhSach(dto: DanhSachNhanVienDto) {
-    const dieuKien = ['nv.ngay_xoa IS NULL', 'tk.ngay_xoa IS NULL'];
-    const thamSo: unknown[] = [];
-    if (dto.trangThai) {
-      dieuKien.push('nv.trang_thai = ?');
-      thamSo.push(dto.trangThai);
-    }
-    if (dto.maVaiTro) {
-      dieuKien.push('vt.ma_vai_tro = ?');
-      thamSo.push(dto.maVaiTro);
-    }
-    if (dto.tuKhoa?.trim()) {
-      const q = `%${dto.tuKhoa.trim()}%`;
-      dieuKien.push('(nv.ma_nhan_vien LIKE ? OR nv.ho_ten LIKE ? OR nv.so_dien_thoai LIKE ? OR tk.email LIKE ?)');
-      thamSo.push(q, q, q, q);
-    }
-    const where = dieuKien.join(' AND ');
-    const offset = (dto.trang - 1) * dto.kichThuoc;
+    const tuKhoa = dto.tuKhoa?.trim();
 
-    const [danhSach, tongRows] = await Promise.all([
-      this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-        `SELECT nv.id, nv.tai_khoan_id, nv.ma_nhan_vien, nv.ho_ten, nv.so_dien_thoai,
-                nv.email, DATE_FORMAT(nv.ngay_vao_lam, '%Y-%m-%d') AS ngay_vao_lam,
-                nv.ghi_chu, nv.trang_thai, nv.ngay_tao, nv.ngay_cap_nhat,
-                tk.ten_dang_nhap, tk.email AS email_tai_khoan, tk.trang_thai AS trang_thai_tai_khoan,
-                tk.bat_buoc_doi_mat_khau, tk.lan_dang_nhap_cuoi,
-                vt.id AS vai_tro_id, vt.ma_vai_tro, vt.ten_vai_tro
-         FROM nhan_vien nv
-         INNER JOIN tai_khoan tk ON tk.id = nv.tai_khoan_id
-         INNER JOIN vai_tro vt ON vt.id = tk.vai_tro_id
-         WHERE ${where}
-         ORDER BY nv.ngay_tao DESC
-         LIMIT ? OFFSET ?`,
-        ...thamSo,
-        dto.kichThuoc,
-        offset,
-      ),
-      this.prisma.$queryRawUnsafe<TongSoDong[]>(
-        `SELECT COUNT(*) AS tong
-         FROM nhan_vien nv
-         INNER JOIN tai_khoan tk ON tk.id = nv.tai_khoan_id
-         INNER JOIN vai_tro vt ON vt.id = tk.vai_tro_id
-         WHERE ${where}`,
-        ...thamSo,
-      ),
+    const where: Prisma.nhan_vienWhereInput = {
+      ngay_xoa: null,
+      trang_thai: dto.trangThai ?? undefined,
+      tai_khoan: {
+        ngay_xoa: null,
+        vai_tro: {
+          ...(dto.maVaiTro
+            ? { ma_vai_tro: dto.maVaiTro }
+            : {}),
+        },
+      },
+      ...(tuKhoa
+        ? {
+            OR: [
+              { ma_nhan_vien: { contains: tuKhoa } },
+              { ho_ten: { contains: tuKhoa } },
+              { so_dien_thoai: { contains: tuKhoa } },
+              {
+                tai_khoan: {
+                  email: { contains: tuKhoa },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const skip = (dto.trang - 1) * dto.kichThuoc;
+
+    const [rows, tong] = await Promise.all([
+      this.prisma.nhan_vien.findMany({
+        where,
+        orderBy: {
+          ngay_tao: 'desc',
+        },
+        skip,
+        take: dto.kichThuoc,
+        select: CHON_NHAN_VIEN,
+      }),
+      this.prisma.nhan_vien.count({ where }),
     ]);
-    const tong = Number(tongRows[0]?.tong ?? 0);
-    return { danhSach, phanTrang: { trang: dto.trang, kichThuoc: dto.kichThuoc, tong, tongTrang: Math.ceil(tong / dto.kichThuoc) } };
+
+    return {
+      danhSach: rows.map((row) =>
+        this.toView(row as NhanVienViewRow),
+      ),
+      phanTrang: {
+        trang: dto.trang,
+        kichThuoc: dto.kichThuoc,
+        tong,
+        tongTrang: Math.ceil(tong / dto.kichThuoc),
+      },
+    };
   }
 
   async chiTiet(id: string) {
-    const nhanVienId = bigintTuChuoi(id, 'ID nhân viên');
-    const rows = await this.prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-      `SELECT nv.id, nv.tai_khoan_id, nv.ma_nhan_vien, nv.ho_ten, nv.so_dien_thoai,
-              nv.email, DATE_FORMAT(nv.ngay_vao_lam, '%Y-%m-%d') AS ngay_vao_lam,
-              nv.ghi_chu, nv.trang_thai, nv.ngay_tao, nv.ngay_cap_nhat,
-              tk.ten_dang_nhap, tk.email AS email_tai_khoan, tk.trang_thai AS trang_thai_tai_khoan,
-              tk.bat_buoc_doi_mat_khau, tk.lan_dang_nhap_cuoi,
-              vt.id AS vai_tro_id, vt.ma_vai_tro, vt.ten_vai_tro
-       FROM nhan_vien nv
-       INNER JOIN tai_khoan tk ON tk.id = nv.tai_khoan_id
-       INNER JOIN vai_tro vt ON vt.id = tk.vai_tro_id
-       WHERE nv.id = ? AND nv.ngay_xoa IS NULL AND tk.ngay_xoa IS NULL
-       LIMIT 1`,
-      nhanVienId,
-    );
-    if (!rows[0]) throw new LoiNghiepVuException('NHAN_VIEN_001', 'Không tìm thấy nhân viên.', HttpStatus.NOT_FOUND);
-    return rows[0];
-  }
-
-  async tao(dto: TaoNhanVienDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
-    const maVaiTro = dto.maVaiTro?.trim() || 'NHAN_VIEN';
-    const [vaiTro] = await this.prisma.$queryRawUnsafe<Array<{ id: bigint; ma_vai_tro: string }>>(
-      "SELECT id, ma_vai_tro FROM vai_tro WHERE ma_vai_tro = ? AND trang_thai = 'HOAT_DONG' LIMIT 1",
-      maVaiTro,
-    );
-    if (!vaiTro) throw new LoiNghiepVuException('NHAN_VIEN_002', 'Vai trò không tồn tại hoặc đã ngừng hoạt động.', HttpStatus.BAD_REQUEST);
-    if (maVaiTro === 'KHACH_HANG') throw new LoiNghiepVuException('NHAN_VIEN_002', 'Không thể gán vai trò KHACH_HANG cho nhân viên.', HttpStatus.BAD_REQUEST);
-
-    const tenDangNhap = dto.tenDangNhap?.trim() || dto.email;
-    const [trungMa, trungEmail, trungTenDangNhap] = await Promise.all([
-      this.prisma.$queryRawUnsafe<IdDong[]>('SELECT id FROM nhan_vien WHERE ma_nhan_vien = ? LIMIT 1', dto.maNhanVien),
-      this.prisma.$queryRawUnsafe<IdDong[]>('SELECT id FROM tai_khoan WHERE email = ? AND ngay_xoa IS NULL LIMIT 1', dto.email),
-      this.prisma.$queryRawUnsafe<IdDong[]>('SELECT id FROM tai_khoan WHERE ten_dang_nhap = ? AND ngay_xoa IS NULL LIMIT 1', tenDangNhap),
-    ]);
-    if (trungMa.length || trungEmail.length || trungTenDangNhap.length) throw new LoiNghiepVuException('NHAN_VIEN_003', 'Mã nhân viên, email hoặc tên đăng nhập đã tồn tại.', HttpStatus.CONFLICT);
-
-    const matKhauHash = await argon2.hash(dto.matKhau);
-    let nhanVienId = 0n;
-    await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(
-        `INSERT INTO tai_khoan
-         (ten_dang_nhap, email, mat_khau, vai_tro_id, trang_thai, bat_buoc_doi_mat_khau)
-         VALUES (?, ?, ?, ?, ?, 1)`,
-        tenDangNhap,
-        dto.email,
-        matKhauHash,
-        vaiTro.id,
-        !dto.trangThai || dto.trangThai === 'HOAT_DONG' ? 'HOAT_DONG' : dto.trangThai === 'TAM_NGHI' ? 'BI_KHOA' : 'NGUNG_HOAT_DONG',
-      );
-      const [tk] = await tx.$queryRawUnsafe<IdDong[]>('SELECT LAST_INSERT_ID() AS id');
-      if (!tk) throw new Error('Không lấy được ID tài khoản vừa tạo.');
-      await tx.$executeRawUnsafe(
-        `INSERT INTO nhan_vien
-         (tai_khoan_id, ma_nhan_vien, ho_ten, so_dien_thoai, email, ngay_vao_lam, ghi_chu, trang_thai)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        tk.id,
-        dto.maNhanVien,
-        dto.hoTen,
-        dto.soDienThoai ?? null,
-        dto.email,
-        dto.ngayVaoLam ?? null,
-        dto.ghiChu ?? null,
-        dto.trangThai ?? 'HOAT_DONG',
-      );
-      const [nv] = await tx.$queryRawUnsafe<IdDong[]>('SELECT LAST_INSERT_ID() AS id');
-      if (!nv) throw new Error('Không lấy được ID nhân viên vừa tạo.');
-      nhanVienId = nv.id;
+    const row = await this.prisma.nhan_vien.findFirst({
+      where: {
+        id: bigintTuChuoi(id, 'ID nhân viên'),
+        ngay_xoa: null,
+        tai_khoan: {
+          ngay_xoa: null,
+        },
+      },
+      select: CHON_NHAN_VIEN,
     });
 
-    const moi = await this.chiTiet(nhanVienId.toString());
-    await this.nhatKy.ghiNhan({ taiKhoanId: nguoiDung.taiKhoanId, hanhDong: 'TAO_NHAN_VIEN', doiTuong: 'NHAN_VIEN', doiTuongId: nhanVienId.toString(), duLieuMoi: moi, maYeuCau });
+    if (!row) {
+      throw new LoiNghiepVuException(
+        'NHAN_VIEN_001',
+        'Không tìm thấy nhân viên.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return this.toView(row as NhanVienViewRow);
+  }
+
+  async tao(
+    dto: TaoNhanVienDto,
+    nguoiDung: NguoiDungXacThuc,
+    maYeuCau?: string | null,
+  ) {
+    const maVaiTro = dto.maVaiTro?.trim() || 'NHAN_VIEN';
+    const vaiTro = await this.damBaoVaiTroNhanVien(maVaiTro);
+
+    const tenDangNhap =
+      dto.tenDangNhap?.trim() || dto.email;
+
+    await this.damBaoKhongTrungKhiTao(
+      dto.maNhanVien,
+      dto.email,
+      tenDangNhap,
+    );
+
+    const ngayVaoLam =
+      dto.ngayVaoLam !== undefined
+        ? this.ngayVaoLam(dto.ngayVaoLam)
+        : null;
+
+    const matKhauHash = await argon2.hash(dto.matKhau);
+    const trangThaiNhanVien =
+      dto.trangThai ?? 'HOAT_DONG';
+
+    const nhanVien = await this.prisma.$transaction(
+      async (tx) => {
+        const taiKhoan = await tx.tai_khoan.create({
+          data: {
+            ten_dang_nhap: tenDangNhap,
+            email: dto.email,
+            mat_khau: matKhauHash,
+            vai_tro_id: vaiTro.id,
+            trang_thai:
+              this.trangThaiTaiKhoan(trangThaiNhanVien),
+            bat_buoc_doi_mat_khau: true,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        return tx.nhan_vien.create({
+          data: {
+            tai_khoan_id: taiKhoan.id,
+            ma_nhan_vien: dto.maNhanVien,
+            ho_ten: dto.hoTen,
+            so_dien_thoai: dto.soDienThoai ?? null,
+            email: dto.email,
+            ngay_vao_lam: ngayVaoLam,
+            ghi_chu: dto.ghiChu ?? null,
+            trang_thai: trangThaiNhanVien,
+          },
+          select: {
+            id: true,
+          },
+        });
+      },
+    );
+
+    const moi = await this.chiTiet(
+      nhanVien.id.toString(),
+    );
+
+    await this.nhatKy.ghiNhan({
+      taiKhoanId: nguoiDung.taiKhoanId,
+      hanhDong: 'TAO_NHAN_VIEN',
+      doiTuong: 'NHAN_VIEN',
+      doiTuongId: nhanVien.id.toString(),
+      duLieuMoi: moi,
+      maYeuCau,
+    });
+
     return moi;
   }
 
-  async capNhat(id: string, dto: CapNhatNhanVienDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
+  async capNhat(
+    id: string,
+    dto: CapNhatNhanVienDto,
+    nguoiDung: NguoiDungXacThuc,
+    maYeuCau?: string | null,
+  ) {
     const cu = await this.chiTiet(id);
-    const nhanVienId = bigintTuChuoi(id, 'ID nhân viên');
-    const taiKhoanId = BigInt(String(cu.tai_khoan_id));
+    const nhanVienId = bigintTuChuoi(
+      id,
+      'ID nhân viên',
+    );
+    const taiKhoanId = cu.tai_khoan_id;
 
     if (
       dto.maVaiTro &&
-      String(cu.tai_khoan_id) === nguoiDung.taiKhoanId &&
-      dto.maVaiTro !== String(cu.ma_vai_tro)
+      taiKhoanId.toString() === nguoiDung.taiKhoanId &&
+      dto.maVaiTro !== cu.ma_vai_tro
     ) {
       throw new LoiNghiepVuException(
         'NHAN_VIEN_005',
@@ -163,76 +263,312 @@ export class NhanVienService {
     }
 
     let vaiTroId: bigint | undefined;
-    if (dto.maVaiTro) {
-      const [vaiTro] = await this.prisma.$queryRawUnsafe<Array<{ id: bigint; ma_vai_tro: string }>>(
-        "SELECT id, ma_vai_tro FROM vai_tro WHERE ma_vai_tro = ? AND trang_thai = 'HOAT_DONG' LIMIT 1",
-        dto.maVaiTro,
-      );
-      if (!vaiTro || vaiTro.ma_vai_tro === 'KHACH_HANG') throw new LoiNghiepVuException('NHAN_VIEN_002', 'Vai trò nhân viên không hợp lệ.', HttpStatus.BAD_REQUEST);
+    if (
+      dto.maVaiTro !== undefined &&
+      dto.maVaiTro !== cu.ma_vai_tro
+    ) {
+      const vaiTro =
+        await this.damBaoVaiTroNhanVien(
+          dto.maVaiTro,
+        );
       vaiTroId = vaiTro.id;
     }
 
-    if (dto.email && dto.email !== cu.email_tai_khoan) {
-      const trung = await this.prisma.$queryRawUnsafe<IdDong[]>(
-        'SELECT id FROM tai_khoan WHERE email = ? AND id <> ? AND ngay_xoa IS NULL LIMIT 1',
-        dto.email,
-        taiKhoanId,
-      );
-      if (trung.length) throw new LoiNghiepVuException('NHAN_VIEN_003', 'Email đã được tài khoản khác sử dụng.', HttpStatus.CONFLICT);
+    if (
+      dto.email !== undefined &&
+      dto.email !== cu.email_tai_khoan
+    ) {
+      const trung = await this.prisma.tai_khoan.findFirst({
+        where: {
+          id: { not: taiKhoanId },
+          email: dto.email,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (trung) {
+        throw new LoiNghiepVuException(
+          'NHAN_VIEN_003',
+          'Email đã được tài khoản khác sử dụng.',
+          HttpStatus.CONFLICT,
+        );
+      }
     }
 
-    const matKhauHash = dto.matKhauMoi ? await argon2.hash(dto.matKhauMoi) : undefined;
-    await this.prisma.$transaction(async (tx) => {
-      const nv: Array<[string, unknown]> = [];
-      if (dto.hoTen !== undefined) nv.push(['ho_ten', dto.hoTen]);
-      if (dto.soDienThoai !== undefined) nv.push(['so_dien_thoai', dto.soDienThoai]);
-      if (dto.email !== undefined) nv.push(['email', dto.email]);
-      if (dto.ngayVaoLam !== undefined) nv.push(['ngay_vao_lam', dto.ngayVaoLam]);
-      if (dto.ghiChu !== undefined) nv.push(['ghi_chu', dto.ghiChu]);
-      if (nv.length) {
-        await tx.$executeRawUnsafe(
-          `UPDATE nhan_vien SET ${nv.map(([cot]) => `${cot} = ?`).join(', ')} WHERE id = ? AND ngay_xoa IS NULL`,
-          ...nv.map(([, v]) => v),
-          nhanVienId,
-        );
-      }
+    const ngayVaoLam =
+      dto.ngayVaoLam !== undefined
+        ? this.ngayVaoLam(dto.ngayVaoLam)
+        : undefined;
 
-      const tk: Array<[string, unknown]> = [];
-      if (dto.email !== undefined) tk.push(['email', dto.email]);
-      if (vaiTroId !== undefined) tk.push(['vai_tro_id', vaiTroId]);
-      if (matKhauHash !== undefined) {
-        tk.push(['mat_khau', matKhauHash]);
-        tk.push(['bat_buoc_doi_mat_khau', 1]);
-        tk.push(['refresh_token_hash', null]);
-      }
-      if (tk.length) {
-        await tx.$executeRawUnsafe(
-          `UPDATE tai_khoan SET ${tk.map(([cot]) => `${cot} = ?`).join(', ')} WHERE id = ? AND ngay_xoa IS NULL`,
-          ...tk.map(([, v]) => v),
-          taiKhoanId,
-        );
-      }
+    const matKhauHash =
+      dto.matKhauMoi !== undefined
+        ? await argon2.hash(dto.matKhauMoi)
+        : undefined;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.nhan_vien.update({
+        where: {
+          id: nhanVienId,
+        },
+        data: {
+          ...(dto.hoTen !== undefined
+            ? { ho_ten: dto.hoTen }
+            : {}),
+          ...(dto.soDienThoai !== undefined
+            ? { so_dien_thoai: dto.soDienThoai }
+            : {}),
+          ...(dto.email !== undefined
+            ? { email: dto.email }
+            : {}),
+          ...(ngayVaoLam !== undefined
+            ? { ngay_vao_lam: ngayVaoLam }
+            : {}),
+          ...(dto.ghiChu !== undefined
+            ? { ghi_chu: dto.ghiChu }
+            : {}),
+        },
+      });
+
+      await tx.tai_khoan.update({
+        where: {
+          id: taiKhoanId,
+        },
+        data: {
+          ...(dto.email !== undefined
+            ? { email: dto.email }
+            : {}),
+          ...(vaiTroId !== undefined
+            ? {
+                vai_tro_id: vaiTroId,
+                refresh_token_hash: null,
+              }
+            : {}),
+          ...(matKhauHash !== undefined
+            ? {
+                mat_khau: matKhauHash,
+                bat_buoc_doi_mat_khau: true,
+                refresh_token_hash: null,
+                so_lan_dang_nhap_sai: 0,
+                khoa_den: null,
+              }
+            : {}),
+        },
+      });
     });
 
     const moi = await this.chiTiet(id);
-    await this.nhatKy.ghiNhan({ taiKhoanId: nguoiDung.taiKhoanId, hanhDong: 'CAP_NHAT_NHAN_VIEN', doiTuong: 'NHAN_VIEN', doiTuongId: id, duLieuCu: cu, duLieuMoi: moi, maYeuCau });
+
+    await this.nhatKy.ghiNhan({
+      taiKhoanId: nguoiDung.taiKhoanId,
+      hanhDong: 'CAP_NHAT_NHAN_VIEN',
+      doiTuong: 'NHAN_VIEN',
+      doiTuongId: id,
+      duLieuCu: cu,
+      duLieuMoi: moi,
+      maYeuCau,
+    });
+
     return moi;
   }
 
-  async capNhatTrangThai(id: string, dto: CapNhatTrangThaiNhanVienDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
+  async capNhatTrangThai(
+    id: string,
+    dto: CapNhatTrangThaiNhanVienDto,
+    nguoiDung: NguoiDungXacThuc,
+    maYeuCau?: string | null,
+  ) {
     const cu = await this.chiTiet(id);
-    if (String(cu.tai_khoan_id) === nguoiDung.taiKhoanId && dto.trangThai !== 'HOAT_DONG') {
-      throw new LoiNghiepVuException('NHAN_VIEN_004', 'Không thể tự khóa hoặc cho chính tài khoản đang đăng nhập nghỉ việc.', HttpStatus.CONFLICT);
+
+    if (
+      cu.tai_khoan_id.toString() === nguoiDung.taiKhoanId &&
+      dto.trangThai !== 'HOAT_DONG'
+    ) {
+      throw new LoiNghiepVuException(
+        'NHAN_VIEN_004',
+        'Không thể tự khóa hoặc cho chính tài khoản đang đăng nhập nghỉ việc.',
+        HttpStatus.CONFLICT,
+      );
     }
-    const nhanVienId = bigintTuChuoi(id, 'ID nhân viên');
-    const taiKhoanId = BigInt(String(cu.tai_khoan_id));
-    const trangThaiTaiKhoan = dto.trangThai === 'HOAT_DONG' ? 'HOAT_DONG' : dto.trangThai === 'TAM_NGHI' ? 'BI_KHOA' : 'NGUNG_HOAT_DONG';
+
+    const nhanVienId = bigintTuChuoi(
+      id,
+      'ID nhân viên',
+    );
+    const taiKhoanId = cu.tai_khoan_id;
+
     await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe('UPDATE nhan_vien SET trang_thai = ? WHERE id = ?', dto.trangThai, nhanVienId);
-      await tx.$executeRawUnsafe('UPDATE tai_khoan SET trang_thai = ?, refresh_token_hash = NULL WHERE id = ?', trangThaiTaiKhoan, taiKhoanId);
+      await tx.nhan_vien.update({
+        where: {
+          id: nhanVienId,
+        },
+        data: {
+          trang_thai: dto.trangThai,
+        },
+      });
+
+      await tx.tai_khoan.update({
+        where: {
+          id: taiKhoanId,
+        },
+        data: {
+          trang_thai:
+            this.trangThaiTaiKhoan(dto.trangThai),
+          refresh_token_hash: null,
+        },
+      });
     });
+
     const moi = await this.chiTiet(id);
-    await this.nhatKy.ghiNhan({ taiKhoanId: nguoiDung.taiKhoanId, hanhDong: 'CAP_NHAT_TRANG_THAI_NHAN_VIEN', doiTuong: 'NHAN_VIEN', doiTuongId: id, duLieuCu: cu, duLieuMoi: moi, maYeuCau });
+
+    await this.nhatKy.ghiNhan({
+      taiKhoanId: nguoiDung.taiKhoanId,
+      hanhDong: 'CAP_NHAT_TRANG_THAI_NHAN_VIEN',
+      doiTuong: 'NHAN_VIEN',
+      doiTuongId: id,
+      duLieuCu: cu,
+      duLieuMoi: moi,
+      maYeuCau,
+    });
+
     return moi;
+  }
+
+  private async damBaoVaiTroNhanVien(
+    maVaiTro: string,
+  ) {
+    const vaiTro = await this.prisma.vai_tro.findFirst({
+      where: {
+        ma_vai_tro: maVaiTro,
+        trang_thai: 'HOAT_DONG',
+      },
+      select: {
+        id: true,
+        ma_vai_tro: true,
+      },
+    });
+
+    if (
+      !vaiTro ||
+      vaiTro.ma_vai_tro === 'KHACH_HANG'
+    ) {
+      throw new LoiNghiepVuException(
+        'NHAN_VIEN_002',
+        'Vai trò nhân viên không tồn tại, đã ngừng hoạt động hoặc không hợp lệ.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return vaiTro;
+  }
+
+  private async damBaoKhongTrungKhiTao(
+    maNhanVien: string,
+    email: string,
+    tenDangNhap: string,
+  ): Promise<void> {
+    const [trungMa, trungEmail, trungTenDangNhap] =
+      await Promise.all([
+        this.prisma.nhan_vien.findUnique({
+          where: {
+            ma_nhan_vien: maNhanVien,
+          },
+          select: {
+            id: true,
+          },
+        }),
+        this.prisma.tai_khoan.findUnique({
+          where: {
+            email,
+          },
+          select: {
+            id: true,
+          },
+        }),
+        this.prisma.tai_khoan.findUnique({
+          where: {
+            ten_dang_nhap: tenDangNhap,
+          },
+          select: {
+            id: true,
+          },
+        }),
+      ]);
+
+    if (
+      trungMa ||
+      trungEmail ||
+      trungTenDangNhap
+    ) {
+      throw new LoiNghiepVuException(
+        'NHAN_VIEN_003',
+        'Mã nhân viên, email hoặc tên đăng nhập đã tồn tại.',
+        HttpStatus.CONFLICT,
+      );
+    }
+  }
+
+  private ngayVaoLam(value: string): Date {
+    if (!laNgayHopLe(value)) {
+      throw new LoiNghiepVuException(
+        'NHAN_VIEN_006',
+        'Ngày vào làm không hợp lệ.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return dateWallClockTuNgay(value);
+  }
+
+  private trangThaiTaiKhoan(
+    trangThaiNhanVien: string,
+  ): string {
+    if (trangThaiNhanVien === 'HOAT_DONG') {
+      return 'HOAT_DONG';
+    }
+
+    if (trangThaiNhanVien === 'TAM_NGHI') {
+      return 'BI_KHOA';
+    }
+
+    return 'NGUNG_HOAT_DONG';
+  }
+
+  private toView(
+    row: NhanVienViewRow,
+  ) {
+    return {
+      id: row.id,
+      tai_khoan_id: row.tai_khoan_id,
+      ma_nhan_vien: row.ma_nhan_vien,
+      ho_ten: row.ho_ten,
+      so_dien_thoai: row.so_dien_thoai,
+      email: row.email,
+      ngay_vao_lam:
+        row.ngay_vao_lam == null
+          ? null
+          : ngayTuDateWallClock(row.ngay_vao_lam),
+      ghi_chu: row.ghi_chu,
+      trang_thai: row.trang_thai,
+      ngay_tao: row.ngay_tao,
+      ngay_cap_nhat: row.ngay_cap_nhat,
+      ten_dang_nhap:
+        row.tai_khoan.ten_dang_nhap,
+      email_tai_khoan:
+        row.tai_khoan.email,
+      trang_thai_tai_khoan:
+        row.tai_khoan.trang_thai,
+      bat_buoc_doi_mat_khau:
+        row.tai_khoan.bat_buoc_doi_mat_khau,
+      lan_dang_nhap_cuoi:
+        row.tai_khoan.lan_dang_nhap_cuoi,
+      vai_tro_id:
+        row.tai_khoan.vai_tro.id,
+      ma_vai_tro:
+        row.tai_khoan.vai_tro.ma_vai_tro,
+      ten_vai_tro:
+        row.tai_khoan.vai_tro.ten_vai_tro,
+    };
   }
 }
