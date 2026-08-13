@@ -7,6 +7,7 @@ import type { NguoiDungXacThuc } from '../../dung-chung/types/nguoi-dung-xac-thu
 import { CauHinhService } from '../cau-hinh/cau-hinh.service';
 import { NhatKyService } from '../nhat-ky/nhat-ky.service';
 import { ThongBaoService } from '../thong-bao/thong-bao.service';
+import { ThanhToanService } from '../thanh-toan/thanh-toan.service';
 import { DatBanRepository } from './dat-ban.repository';
 import { HuyDatBanDto } from './dto/huy-dat-ban.dto';
 import { SapBanDto } from './dto/sap-ban.dto';
@@ -20,6 +21,7 @@ export class DatBanWorkflowService {
     private readonly repository: DatBanRepository,
     private readonly cauHinh: CauHinhService,
     private readonly thongBao: ThongBaoService,
+    private readonly thanhToan: ThanhToanService,
     private readonly nhatKy: NhatKyService,
   ) {}
 
@@ -98,7 +100,19 @@ export class DatBanWorkflowService {
   }
 
   async huyQuanTri(id: string, dto: HuyDatBanDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
-    return this.chuyenTrangThai(id, 'DA_HUY', 'HUY', nguoiDung, dto.lyDo, maYeuCau);
+    const coQuyenHoanTien =
+      await this.coQuyenHoanTien(nguoiDung.vaiTroId);
+
+    return this.chuyenTrangThai(
+      id,
+      'DA_HUY',
+      'HUY',
+      nguoiDung,
+      dto.lyDo,
+      maYeuCau,
+      100,
+      coQuyenHoanTien,
+    );
   }
 
   async khongDen(id: string, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
@@ -127,8 +141,26 @@ export class DatBanWorkflowService {
     if (gioBatDau - Date.now() < truocPhut * 60_000) {
       throw new LoiNghiepVuException('DAT_BAN_007', `Chỉ được tự hủy trước giờ đặt ít nhất ${truocPhut} phút.`, HttpStatus.CONFLICT);
     }
-    const ketQua = await this.chuyenTrangThaiNoiBo(datBanId, 'DA_HUY', 'KHACH_HUY', BigInt(nguoiDung.taiKhoanId), dto.lyDo);
-    await this.thongBao.taoChoDatBan(datBanId, 'DAT_BAN_DA_HUY', 'Đặt bàn đã hủy', `Đặt bàn ${datBan.ma_dat_ban} đã được hủy.`);
+    const tyLeHoanTien =
+      await this.cauHinh.laySo(
+        'TY_LE_HOAN_TIEN_HUY_DUNG_HAN',
+      );
+
+    const ketQua = await this.chuyenTrangThaiNoiBo(
+      datBanId,
+      'DA_HUY',
+      'KHACH_HUY',
+      BigInt(nguoiDung.taiKhoanId),
+      dto.lyDo,
+      tyLeHoanTien,
+      true,
+    );
+    await this.thongBao.taoChoDatBan(
+      datBanId,
+      'DAT_BAN_DA_HUY',
+      'Đặt bàn đã hủy',
+      `Đặt bàn ${datBan.ma_dat_ban} đã được hủy. Nếu đã thanh toán, trạng thái hoàn tiền được hiển thị trong chi tiết đặt bàn.`,
+    );
     return ketQua;
   }
 
@@ -176,11 +208,21 @@ export class DatBanWorkflowService {
     nguoiDung: NguoiDungXacThuc,
     ghiChu?: string,
     maYeuCau?: string | null,
+    tyLeHoanTien?: number,
+    choPhepHoanTien = false,
   ) {
     const datBanId = bigintTuChuoi(id, 'ID đặt bàn');
     const cu = await this.repository.layChiTietDayDu(datBanId);
     if (!cu) throw new LoiNghiepVuException('DAT_BAN_001', 'Đặt bàn không tồn tại.', HttpStatus.NOT_FOUND);
-    const moi = await this.chuyenTrangThaiNoiBo(datBanId, trangThaiMoi, hanhDong, BigInt(nguoiDung.taiKhoanId), ghiChu);
+    const moi = await this.chuyenTrangThaiNoiBo(
+      datBanId,
+      trangThaiMoi,
+      hanhDong,
+      BigInt(nguoiDung.taiKhoanId),
+      ghiChu,
+      tyLeHoanTien,
+      choPhepHoanTien,
+    );
     await this.nhatKy.ghiNhan({ taiKhoanId: nguoiDung.taiKhoanId, hanhDong, doiTuong: 'DAT_BAN', doiTuongId: id, duLieuCu: cu, duLieuMoi: moi, maYeuCau });
 
     const thongBao = trangThaiMoi === 'DA_XAC_NHAN'
@@ -192,7 +234,44 @@ export class DatBanWorkflowService {
     return moi;
   }
 
-  private async chuyenTrangThaiNoiBo(datBanId: bigint, trangThaiMoi: string, hanhDong: string, taiKhoanId: bigint | null, ghiChu?: string) {
+  private async coQuyenHoanTien(
+    vaiTroId: string,
+  ): Promise<boolean> {
+    const quyen = await this.prisma.quyen.findUnique({
+      where: {
+        ma_quyen: 'HOAN_TIEN_THUC_HIEN',
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!quyen) {
+      return false;
+    }
+
+    const lienKet = await this.prisma.vai_tro_quyen.findFirst({
+      where: {
+        vai_tro_id: BigInt(vaiTroId),
+        quyen_id: quyen.id,
+      },
+      select: {
+        vai_tro_id: true,
+      },
+    });
+
+    return Boolean(lienKet);
+  }
+
+  private async chuyenTrangThaiNoiBo(
+    datBanId: bigint,
+    trangThaiMoi: string,
+    hanhDong: string,
+    taiKhoanId: bigint | null,
+    ghiChu?: string,
+    tyLeHoanTien?: number,
+    choPhepHoanTien = false,
+  ) {
     const canKhoaBan = ['DA_CHECK_IN', 'DA_HOAN_THANH'].includes(trangThaiMoi);
     const banIds = canKhoaBan
       ? (await this.prisma.chi_tiet_dat_ban.findMany({ where: { dat_ban_id: datBanId }, select: { ban_an_id: true } }))
@@ -249,6 +328,35 @@ export class DatBanWorkflowService {
       const hopLe = coTheChuyenTrangThai(datBan.trang_thai, trangThaiMoi);
       if (!hopLe) {
         throw new LoiNghiepVuException('DAT_BAN_008', `Không thể chuyển từ ${datBan.trang_thai} sang ${trangThaiMoi}.`, HttpStatus.CONFLICT);
+      }
+
+      if (trangThaiMoi === 'DA_XAC_NHAN') {
+        await this.thanhToan.danhDauKhuyenMaiDaDungTrongTransaction(
+          tx,
+          datBanId,
+        );
+      }
+
+      if (trangThaiMoi === 'DA_HUY') {
+        await this.thanhToan.giaiPhongKhuyenMaiTrongTransaction(
+          tx,
+          datBanId,
+          ghiChu?.trim() || 'Hủy đặt bàn',
+        );
+      }
+
+      if (
+        trangThaiMoi === 'DA_HUY' &&
+        tyLeHoanTien !== undefined
+      ) {
+        await this.thanhToan.hoanTienDatBanTrongTransaction(
+          tx,
+          datBanId,
+          tyLeHoanTien,
+          ghiChu?.trim() || 'Hủy đặt bàn',
+          taiKhoanId,
+          choPhepHoanTien,
+        );
       }
 
       let nhanVienId: bigint | null = null;

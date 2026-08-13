@@ -19,6 +19,8 @@ export class BaoCaoService {
       theoTrangThai,
       theoNguon,
       theoKhuVuc,
+      thanhToan,
+      hoanTien,
     ] = await Promise.all([
       this.prisma.$queryRaw<Record<string, unknown>[]>`
         SELECT
@@ -87,6 +89,85 @@ export class BaoCaoService {
         GROUP BY kv.id, kv.ten_khu_vuc
         ORDER BY so_luong DESC
       `,
+      this.prisma.$queryRaw<
+        Record<string, unknown>[]
+      >`
+        SELECT
+          COALESCE(
+            SUM(
+              CASE
+                WHEN trang_thai IN (
+                  'DA_THANH_TOAN',
+                  'HOAN_MOT_PHAN',
+                  'DA_HOAN_TIEN'
+                )
+                AND DATE(DATE_ADD(thoi_gian_thanh_toan, INTERVAL 7 HOUR))
+                  BETWEEN ${tuNgay} AND ${denNgay}
+                THEN so_tien
+                ELSE 0
+              END
+            ),
+            0
+          ) AS tong_da_thu,
+          SUM(
+            CASE
+              WHEN trang_thai IN (
+                'DA_THANH_TOAN',
+                'HOAN_MOT_PHAN',
+                'DA_HOAN_TIEN'
+              )
+              AND DATE(DATE_ADD(thoi_gian_thanh_toan, INTERVAL 7 HOUR))
+                BETWEEN ${tuNgay} AND ${denNgay}
+              THEN 1
+              ELSE 0
+            END
+          ) AS so_giao_dich_da_thu,
+          SUM(
+            CASE
+              WHEN trang_thai = 'CHO_THANH_TOAN'
+              THEN 1
+              ELSE 0
+            END
+          ) AS so_giao_dich_cho_thanh_toan
+        FROM thanh_toan
+      `,
+      this.prisma.$queryRaw<
+        Record<string, unknown>[]
+      >`
+        SELECT
+          COALESCE(
+            SUM(
+              CASE
+                WHEN trang_thai = 'DA_HOAN'
+                AND DATE(DATE_ADD(thoi_gian_hoan, INTERVAL 7 HOUR))
+                  BETWEEN ${tuNgay} AND ${denNgay}
+                THEN so_tien
+                ELSE 0
+              END
+            ),
+            0
+          ) AS tong_da_hoan,
+          SUM(
+            CASE
+              WHEN trang_thai = 'DA_HOAN'
+              AND DATE(DATE_ADD(thoi_gian_hoan, INTERVAL 7 HOUR))
+                BETWEEN ${tuNgay} AND ${denNgay}
+              THEN 1
+              ELSE 0
+            END
+          ) AS so_giao_dich_hoan,
+          SUM(
+            CASE
+              WHEN trang_thai IN (
+                'CHO_HOAN',
+                'DANG_XU_LY'
+              )
+              THEN 1
+              ELSE 0
+            END
+          ) AS so_yeu_cau_hoan_cho_xu_ly
+        FROM hoan_tien
+      `,
     ]);
 
     const tq = this.soHoa(
@@ -122,6 +203,21 @@ export class BaoCaoService {
       theoKhuVuc: theoKhuVuc.map((x) =>
         this.soHoa(x),
       ),
+      taiChinh: {
+        ...this.soHoa(
+          thanhToan[0] ?? {},
+        ),
+        ...this.soHoa(
+          hoanTien[0] ?? {},
+        ),
+        thucThu:
+          Number(
+            thanhToan[0]?.tong_da_thu ?? 0,
+          ) -
+          Number(
+            hoanTien[0]?.tong_da_hoan ?? 0,
+          ),
+      },
     };
   }
 
@@ -282,6 +378,12 @@ export class BaoCaoService {
       'tong_hoan_thanh',
       'tong_danh_gia',
       'da_phan_hoi',
+      'tong_da_thu',
+      'tong_da_hoan',
+      'so_giao_dich_da_thu',
+      'so_giao_dich_cho_thanh_toan',
+      'so_giao_dich_hoan',
+      'so_yeu_cau_hoan_cho_xu_ly',
     ]);
 
     for (const [khoa, giaTri] of Object.entries(

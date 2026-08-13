@@ -50,3 +50,24 @@ export type KieuXepBan =
   | 'KHACH_CHON_BAN'
   | 'HE_THONG_SAP_XEP'
   | 'NHAN_VIEN_SAP_XEP';
+
+export type TrangThaiThanhToan =
+  | 'CHO_THANH_TOAN'
+  | 'DA_THANH_TOAN'
+  | 'THAT_BAI'
+  | 'DA_HUY'
+  | 'DA_HOAN_TIEN'
+  | 'HOAN_MOT_PHAN';
+
+export type PhuongThucThanhToan =
+  | 'MO_PHONG'
+  | 'VNPAY'
+  | 'MOMO'
+  | 'CHUYEN_KHOAN'
+  | 'TIEN_MAT';
+
+export type TrangThaiHoanTien =
+  | 'CHO_HOAN'
+  | 'DANG_XU_LY'
+  | 'DA_HOAN'
+  | 'THAT_BAI';

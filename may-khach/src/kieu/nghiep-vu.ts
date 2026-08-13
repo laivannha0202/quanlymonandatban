@@ -1,9 +1,12 @@
 import type {
   NguonDatBan,
+  PhuongThucThanhToan,
   TrangThaiBanAn,
   TrangThaiDatBan,
+  TrangThaiHoanTien,
   TrangThaiHoatDong,
   TrangThaiTaiKhoan,
+  TrangThaiThanhToan,
 } from './trang-thai';
 
 export interface BoToken {
@@ -89,6 +92,63 @@ export interface KetQuaTimBan {
   phuongAn: BanAnPhuongAn[];
 }
 
+
+export interface MonDatTruoc {
+  id?: string;
+  monAnId: string;
+  maMon: string;
+  tenMon: string;
+  donGia: number;
+  soLuong: number;
+  thanhTien: number;
+  ghiChu?: string | null;
+}
+
+export interface KhuyenMaiDatBan {
+  id: string;
+  maKhuyenMai: string;
+  tenKhuyenMai: string;
+  loaiGiam: 'PHAN_TRAM' | 'SO_TIEN';
+  giaTri: number;
+  giaTriMonToiThieu?: number | null;
+  giamToiDa?: number | null;
+}
+
+export interface HoanTienDatBan {
+  id: string;
+  maHoanTien: string;
+  soTien: number;
+  lyDo: string;
+  trangThai: TrangThaiHoanTien;
+  maGiaoDichCong?: string | null;
+  nguoiThucHienId?: string | null;
+  thoiGianHoan?: string | null;
+  ngayTao: string;
+}
+
+export interface ThanhToanDatBan {
+  id: string;
+  maThanhToan: string;
+  datBanId?: string;
+  soTien: number;
+  phuongThuc: PhuongThucThanhToan;
+  trangThai: TrangThaiThanhToan;
+  maGiaoDichCong?: string | null;
+  khoaIdempotency?: string | null;
+  thoiGianThanhToan?: string | null;
+  ngayTao?: string;
+  ngayCapNhat?: string;
+  hoanTien?: HoanTienDatBan[];
+}
+
+export interface ThanhToanTaoDatBan {
+  id: string;
+  maThanhToan: string;
+  soTien: number;
+  phuongThuc: PhuongThucThanhToan;
+  trangThai: TrangThaiThanhToan;
+}
+
 export interface DatBan {
   id: string;
   maDatBan: string;
@@ -103,6 +163,15 @@ export interface DatBan {
   nguonDat?: NguonDatBan;
   ghiChuKhach?: string | null;
   banAns?: Array<{ id: string; maBan: string; tenBan?: string; tenKhuVuc?: string }>;
+  monAn?: MonDatTruoc[];
+  khuyenMaiId?: string | null;
+  maKhuyenMaiApDung?: string | null;
+  khuyenMai?: KhuyenMaiDatBan | null;
+  tamTinhMon?: number;
+  tienGiam?: number;
+  tienCoc?: number;
+  tongThanhToanTruoc?: number;
+  thanhToan?: ThanhToanDatBan[];
   lichSu?: Array<{
     id: string;
     trangThaiCu: TrangThaiDatBan | null;

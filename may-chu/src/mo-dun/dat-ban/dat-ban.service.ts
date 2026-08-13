@@ -11,12 +11,14 @@ import { TimBanTrongService } from '../ban-an/tim-ban-trong.service';
 import { KhachHangLifecycleService } from '../khach-hang/khach-hang-lifecycle.service';
 import { NhatKyService } from '../nhat-ky/nhat-ky.service';
 import { ThongBaoService } from '../thong-bao/thong-bao.service';
+import { ThanhToanService } from '../thanh-toan/thanh-toan.service';
 import { CapNhatThongTinDatBanDto } from './dto/cap-nhat-thong-tin-dat-ban.dto';
 import { DanhSachDatBanDto } from './dto/danh-sach-dat-ban.dto';
 import { TaoDatBanAdminDto } from './dto/tao-dat-ban-admin.dto';
 import { TaoDatBanDto } from './dto/tao-dat-ban.dto';
 import { TraCuuDatBanDto } from './dto/tra-cuu-dat-ban.dto';
 import { DatBanRepository } from './dat-ban.repository';
+import { DatBanTinhTienService } from './dat-ban-tinh-tien.service';
 
 interface TaoDatBanNoiBo extends TaoDatBanDto {
   nguonDat: 'WEBSITE' | 'DIEN_THOAI' | 'FACEBOOK' | 'TRUC_TIEP' | 'KHAC';
@@ -31,6 +33,8 @@ export class DatBanService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly repository: DatBanRepository,
+    private readonly tinhTien: DatBanTinhTienService,
+    private readonly thanhToan: ThanhToanService,
     private readonly timBanTrong: TimBanTrongService,
     private readonly lichPhucVu: LichPhucVuService,
     private readonly cauHinh: CauHinhService,
@@ -77,6 +81,7 @@ export class DatBanService {
   }
 
   private async taoNoiBo(input: TaoDatBanNoiBo) {
+    await this.thanhToan.huyDatBanQuaHanThanhToan();
     const gioKetThuc = await this.lichPhucVu.tinhGioKetThuc(input.ngay, input.gioBatDau);
     let banIds = (input.banAnIds ?? []).map((id) => bigintTuChuoi(id, 'ID bàn'));
 
@@ -98,6 +103,13 @@ export class DatBanService {
       if (input.khuVucId && ban[0].khu_vuc_id !== bigintTuChuoi(input.khuVucId, 'ID khu vực')) {
         throw new LoiNghiepVuException('DAT_BAN_019', 'Bàn đã chọn không thuộc khu vực yêu cầu.', HttpStatus.UNPROCESSABLE_ENTITY);
       }
+
+      // Báo giá lại bên trong chính transaction tạo booking.
+      // Frontend chỉ gửi ID món/số lượng/mã ưu đãi; giá và tiền giảm luôn lấy từ DB.
+      const baoGia = await this.tinhTien.tinhTrongTransaction(tx, {
+        monAn: input.monAn,
+        maKhuyenMai: input.maKhuyenMai,
+      });
 
       const khach =
         await this.khachHangLifecycle.damBaoKhachChoDatBan(
@@ -140,6 +152,10 @@ export class DatBanService {
               khachHangId,
             khu_vuc_id:
               ban[0].khu_vuc_id,
+            khuyen_mai_id:
+              baoGia.khuyenMai
+                ? BigInt(baoGia.khuyenMai.id)
+                : null,
             ho_ten:
               input.hoTen.trim(),
             so_dien_thoai:
@@ -167,6 +183,16 @@ export class DatBanService {
               input.nguonDat,
             kieu_xep_ban:
               kieuXepBan,
+            ma_khuyen_mai_ap_dung:
+              baoGia.khuyenMai?.maKhuyenMai ?? null,
+            tam_tinh_mon:
+              baoGia.tamTinhMon,
+            tien_giam:
+              baoGia.tienGiam,
+            tien_coc:
+              baoGia.tienCoc,
+            tong_thanh_toan_truoc:
+              baoGia.tongThanhToanTruoc,
             ghi_chu_khach:
               input.ghiChu?.trim() ||
               null,
@@ -186,6 +212,30 @@ export class DatBanService {
         });
 
       const id = datBanMoi.id;
+
+      if (baoGia.khuyenMai) {
+        await this.tinhTien.giuKhuyenMaiTrongTransaction(
+          tx,
+          {
+            khuyenMaiId:
+              BigInt(baoGia.khuyenMai.id),
+            datBanId: id,
+            soDienThoai:
+              khach.so_dien_thoai,
+          },
+        );
+      }
+
+      if (
+        baoGia.khuyenMai &&
+        trangThai === 'DA_XAC_NHAN'
+      ) {
+        await this.thanhToan.danhDauKhuyenMaiDaDungTrongTransaction(
+          tx,
+          id,
+        );
+      }
+
       const maDatBan =
         `DB${input.ngay.replaceAll('-', '')}-` +
         id.toString().padStart(6, '0');
@@ -196,7 +246,71 @@ export class DatBanService {
           ma_dat_ban: maDatBan,
         },
       });
-      await tx.chi_tiet_dat_ban.createMany({ data: ban.map((item) => ({ dat_ban_id: id, ban_an_id: item.id })) });
+      await tx.chi_tiet_dat_ban.createMany({
+        data: ban.map((item) => ({
+          dat_ban_id: id,
+          ban_an_id: item.id,
+        })),
+      });
+
+      if (baoGia.monAn.length) {
+        await tx.chi_tiet_dat_mon.createMany({
+          data: baoGia.monAn.map((item) => ({
+            dat_ban_id: id,
+            mon_an_id: BigInt(item.monAnId),
+            ma_mon: item.maMon,
+            ten_mon: item.tenMon,
+            don_gia: item.donGia,
+            so_luong: item.soLuong,
+            thanh_tien: item.thanhTien,
+            ghi_chu: item.ghiChu,
+          })),
+        });
+      }
+
+      let thanhToan: {
+        id: bigint;
+        maThanhToan: string;
+        soTien: number;
+        phuongThuc: string;
+        trangThai: string;
+      } | null = null;
+
+      // Booking online tạo payment intent ngay trong transaction.
+      // Admin tạo booking trực tiếp sẽ ghi nhận tiền ở màn quản trị Phase 10G.
+      if (!input.laQuanTri && baoGia.tongThanhToanTruoc > 0) {
+        const maThanhToan =
+          `TT${input.ngay.replaceAll('-', '')}-` +
+          id.toString().padStart(6, '0');
+
+        const payment = await tx.thanh_toan.create({
+          data: {
+            ma_thanh_toan: maThanhToan,
+            dat_ban_id: id,
+            so_tien: baoGia.tongThanhToanTruoc,
+            phuong_thuc: 'MO_PHONG',
+            trang_thai: 'CHO_THANH_TOAN',
+            ghi_chu:
+              `Thanh toán trước cho đặt bàn ${maDatBan}.`,
+          },
+          select: {
+            id: true,
+            ma_thanh_toan: true,
+            so_tien: true,
+            phuong_thuc: true,
+            trang_thai: true,
+          },
+        });
+
+        thanhToan = {
+          id: payment.id,
+          maThanhToan: payment.ma_thanh_toan,
+          soTien: Math.round(Number(payment.so_tien)),
+          phuongThuc: payment.phuong_thuc,
+          trangThai: payment.trang_thai,
+        };
+      }
+
       await tx.lich_su_dat_ban.create({
         data: {
           dat_ban_id: id,
@@ -221,6 +335,15 @@ export class DatBanService {
         soNguoi: input.soNguoi,
         ghiChuKhach: input.ghiChu?.trim() || null,
         banAns: ban,
+        monAn: baoGia.monAn,
+        khuyenMai: baoGia.khuyenMai,
+        tamTinhMon: baoGia.tamTinhMon,
+        tienGiam: baoGia.tienGiam,
+        tienMonSauGiam: baoGia.tienMonSauGiam,
+        tienMonThanhToanTruoc: baoGia.tienMonThanhToanTruoc,
+        tienCoc: baoGia.tienCoc,
+        tongThanhToanTruoc: baoGia.tongThanhToanTruoc,
+        thanhToan,
       };
     }, { timeout: 10_000 });
 

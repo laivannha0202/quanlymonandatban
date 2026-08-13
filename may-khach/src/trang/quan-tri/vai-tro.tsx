@@ -146,12 +146,7 @@ export function QuanTriVaiTro() {
         />
       )}
 
-      <Space
-        align="start"
-        size="large"
-        className="rbac-layout"
-        wrap
-      >
+      <div className="rbac-layout">
         <Card
           className="admin-section-card rbac-role-list"
           title="Vai trò"
@@ -289,7 +284,7 @@ export function QuanTriVaiTro() {
             </Button>
           </div>
         </Card>
-      </Space>
+      </div>
     </>
   );
 }

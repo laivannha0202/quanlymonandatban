@@ -49,14 +49,47 @@ a { color: inherit; }
 .notification-unread { background: #fff8f0; margin-inline: -24px; padding-inline: 24px !important; }
 .promo-card { height: 100%; }
 .report-grid { margin-top: 16px; }
-.rbac-layout { display: flex; width: 100%; }
-.rbac-role-list { width: 250px; flex: 0 0 250px; }
-.rbac-permissions { min-width: 0; flex: 1 1 700px; }
-.permission-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
+.rbac-layout {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.rbac-role-list {
+  width: 250px;
+  flex: 0 0 250px;
+}
+.rbac-permissions {
+  min-width: 0;
+  flex: 1 1 700px;
+}
+
+.rbac-permissions .ant-card-body,
+.rbac-permissions .ant-checkbox-group,
+.rbac-permissions .ant-collapse {
+  width: 100%;
+}
+
+.rbac-permissions .ant-checkbox-group {
+  display: block;
+}
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 18px;
+}
 .permission-grid .ant-checkbox-wrapper { align-items: flex-start; }
 .permission-grid small { display: block; margin-top: 2px; color: #777; font-weight: 400; }
 .json-box { max-height: 320px; overflow: auto; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 10px; background: #f6f6f6; border: 1px solid #e8e8e8; }
 .admin-role { font-size: 11px; }
+
+@media (max-width: 1180px) {
+  .permission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 720px) {
   .public-header { align-items: flex-start; flex-direction: column; }
   .public-nav { width: 100%; }

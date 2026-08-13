@@ -2,6 +2,7 @@ import {
   AppstoreOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
+  CreditCardOutlined,
   DashboardOutlined,
   EnvironmentOutlined,
   GiftOutlined,
@@ -12,6 +13,7 @@ import {
   MessageOutlined,
   PieChartOutlined,
   SafetyCertificateOutlined,
+  SettingOutlined,
   ShopOutlined,
   TagsOutlined,
   TeamOutlined,
@@ -68,6 +70,13 @@ const muc = [
     icon: <CalendarOutlined />,
     label: 'Đặt bàn',
     quyen: 'DAT_BAN_XEM',
+    nhom: 'van-hanh',
+  },
+  {
+    key: '/quan-tri/thanh-toan',
+    icon: <CreditCardOutlined />,
+    label: 'Thanh toán & hoàn tiền',
+    quyen: 'THANH_TOAN_XEM',
     nhom: 'van-hanh',
   },
   {
@@ -152,6 +161,13 @@ const muc = [
     icon: <CalendarOutlined />,
     label: 'Ngày đặc biệt',
     quyen: 'LICH_PHUC_VU_QUAN_LY',
+    nhom: 'he-thong',
+  },
+  {
+    key: '/quan-tri/cau-hinh-dat-ban',
+    icon: <SettingOutlined />,
+    label: 'Cấu hình đặt bàn',
+    quyen: 'CAU_HINH_DAT_BAN_QUAN_LY',
     nhom: 'he-thong',
   },
 ] as const;

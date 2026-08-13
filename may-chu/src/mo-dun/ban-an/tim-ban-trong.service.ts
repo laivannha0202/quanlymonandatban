@@ -4,6 +4,7 @@ import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.e
 import { bigintTuChuoi } from '../../dung-chung/tien-ich/id';
 import { ngayGioSql } from '../../dung-chung/tien-ich/ngay-gio';
 import { CauHinhService } from '../cau-hinh/cau-hinh.service';
+import { ThanhToanService } from '../thanh-toan/thanh-toan.service';
 import { BanAnRepository, BanKhaDung } from './ban-an.repository';
 import { TimBanTrongDto } from './dto/tim-ban-trong.dto';
 import { LichPhucVuService } from './lich-phuc-vu.service';
@@ -34,9 +35,11 @@ export class TimBanTrongService {
     private readonly lichPhucVu: LichPhucVuService,
     private readonly repository: BanAnRepository,
     private readonly lienKetBan: LienKetBanService,
+    private readonly thanhToan: ThanhToanService,
   ) {}
 
   async tim(dto: TimBanTrongDto): Promise<KetQuaTimBanTrong> {
+    await this.thanhToan.huyDatBanQuaHanThanhToan();
     const choPhep = await this.cauHinh.layBoolean('CHO_PHEP_DAT_BAN');
     if (!choPhep) {
       throw new LoiNghiepVuException(

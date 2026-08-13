@@ -114,7 +114,38 @@ Thứ tự ngắn gọn:
 9. Đánh giá và phản hồi.
 10. Báo cáo và nhật ký.
 
-## 8. Kiểm tra trước khi nộp
+<!-- PHASE10_FINANCE_HANDOFF -->
+## 8. Thanh toán, hoàn tiền và cấu hình booking
+
+Các cấu hình booking/tài chính quan trọng được quản lý trong hệ thống:
+
+- cho phép đặt món trước;
+- yêu cầu thanh toán món trước;
+- tiền cọc giữ bàn;
+- thời gian thanh toán;
+- thời gian tối thiểu cho phép khách tự hủy;
+- tỷ lệ hoàn tiền khi hủy đúng hạn.
+
+Để demo thanh toán nội bộ, chạy Backend ở môi trường development với:
+
+```env
+PAYMENT_DEMO_ENABLED=true
+```
+
+Không bật cờ này mặc định trên production. `MO_PHONG` chỉ phục vụ demo/E2E; kiến trúc payment giữ tách biệt để sau này nối VNPAY/MOMO hoặc gateway khác.
+
+Kịch bản demo tài chính đề xuất:
+
+1. Chọn bàn và chọn ít nhất một món; có thể nhập ghi chú riêng từng món.
+2. Áp mã ưu đãi và kiểm tra Backend trả về tạm tính, giảm giá, cọc và tổng trả trước.
+3. Tạo booking, xác nhận payment mô phỏng và kiểm tra booking tự chuyển sang `DA_XAC_NHAN`.
+4. Mở quản trị Thanh toán để xem giao dịch.
+5. Hủy booking đã thanh toán bằng tài khoản có quyền hoàn tiền và kiểm tra refund.
+6. Mở Dashboard/Báo cáo để xem đã thu, đã hoàn và thực thu.
+
+Database mới import `co-so-du-lieu/quan_ly_nha_hang_mysql.sql`. Database cũ cần áp dụng migration `co-so-du-lieu/20260813_phase10a_dat_mon_thanh_toan.sql` đúng một lần trước khi chạy source mới.
+
+## 9. Kiểm tra trước khi nộp
 
 ```bash
 cd may-chu
@@ -145,7 +176,7 @@ npm run build
 npm run test:e2e
 ```
 
-## 9. Những điều không làm
+## 10. Những điều không làm
 
 - Không commit `.env`, mật khẩu thật hoặc token.
 - Không chạy seed demo trên production.
@@ -156,7 +187,7 @@ npm run test:e2e
 - Không lưu refresh token trong JSON/localStorage; refresh token dùng HttpOnly cookie.
 - Không bỏ qua lỗi test/build trước khi bàn giao.
 
-## 10. CI
+## 11. CI
 
 Repository có ba workflow:
 
@@ -165,3 +196,18 @@ Repository có ba workflow:
 - `integration-e2e.yml`: MySQL 8.4 + seed + API smoke + booking concurrency + Playwright.
 
 Đây là gate tham chiếu khi merge vào `main`.
+
+
+### Phase 10Q — quota sử dụng khuyến mãi
+
+Khuyến mãi hỗ trợ `so_luot_toi_da` (tổng lượt) và
+`so_luot_moi_khach` (giới hạn theo số điện thoại). Bảng
+`su_dung_khuyen_mai` lưu ledger `DA_GIU` / `DA_DUNG` / `DA_HUY`;
+`DA_GIU` và `DA_DUNG` cùng chiếm quota, còn `DA_HUY` đã trả lượt.
+
+Khi tạo booking, backend khóa promotion row bằng `FOR UPDATE` trước khi
+giữ quota, vì vậy hai khách tranh lượt cuối chỉ một booking được giữ.
+Thanh toán thành công chuyển `DA_GIU -> DA_DUNG`; timeout hoặc hủy trước
+khi sử dụng chuyển `DA_GIU -> DA_HUY`. Quote chỉ kiểm tra quota để báo
+sớm cho giao diện; transaction tạo booking vẫn là nguồn quyết định cuối
+cùng. Schema hiện có **27 Prisma models / 27 bảng MySQL**.

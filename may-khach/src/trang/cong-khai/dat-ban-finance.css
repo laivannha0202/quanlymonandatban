@@ -1,0 +1,196 @@
+.booking-finance-page .booking-steps {
+  margin-bottom: 24px;
+}
+
+.booking-step-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.booking-dish-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.booking-dish-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.booking-dish-card.selected {
+  border-color: var(--ant-color-primary);
+  box-shadow: 0 0 0 1px var(--ant-color-primary);
+}
+
+.booking-dish-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.booking-dish-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.booking-dish-qty {
+  width: 54px;
+}
+
+.booking-dish-total,
+.booking-money-row,
+.booking-summary-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.booking-dish-total {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--ant-color-fill-quaternary);
+}
+
+.booking-coupon-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.booking-money-box {
+  padding: 16px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 12px;
+  background: var(--ant-color-bg-container);
+}
+
+.booking-money-row {
+  min-height: 34px;
+}
+
+.booking-money-row.total {
+  font-size: 16px;
+}
+
+.booking-summary-line {
+  justify-content: flex-start;
+}
+
+.booking-summary-line > span {
+  flex: 1;
+}
+
+.booking-centered-loading {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+}
+
+.booking-payment-intent {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.booking-success-items {
+  margin-top: 20px;
+}
+
+@media (max-width: 767px) {
+  .booking-dish-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-coupon-row {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-step-actions {
+    flex-direction: column-reverse;
+  }
+
+  .booking-step-actions .ant-btn {
+    width: 100%;
+  }
+}
+
+.booking-dish-note {
+  margin-top: 12px;
+}
+
+.booking-coupon-helper {
+  margin-bottom: 16px;
+}
+
+/* PHASE10P_V3_BOOKING_UX */
+.booking-promo-discovery {
+  margin-bottom: 18px;
+}
+
+.booking-promo-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.booking-promo-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(124, 45, 35, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.booking-promo-card-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.booking-promo-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.booking-promo-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.booking-promo-note {
+  display: block;
+  margin-top: 8px;
+}
+
+.booking-manual-coupon-label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+  .booking-promo-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .booking-promo-card > .ant-btn {
+    width: 100%;
+  }
+}

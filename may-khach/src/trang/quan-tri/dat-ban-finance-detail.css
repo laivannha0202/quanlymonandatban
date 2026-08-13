@@ -1,0 +1,60 @@
+.admin-booking-preorder-list,
+.admin-booking-finance-box,
+.admin-booking-refund-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-booking-finance-box {
+  padding: 14px 16px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 12px;
+  background: var(--ant-color-bg-container);
+}
+
+.admin-booking-finance-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 30px;
+}
+
+.admin-booking-finance-row > :last-child {
+  text-align: right;
+}
+
+.admin-booking-finance-row.total {
+  font-size: 16px;
+}
+
+.admin-booking-preorder-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.admin-booking-preorder-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-booking-payment-card + .admin-booking-payment-card {
+  margin-top: 12px;
+}
+
+.admin-booking-refund-list {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ant-color-border);
+}
+
+.admin-booking-refund-item {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--ant-color-fill-quaternary);
+}
+
+@media (max-width: 575px) {
+  .admin-booking-finance-row {
+    gap: 8px;
+  }
+}

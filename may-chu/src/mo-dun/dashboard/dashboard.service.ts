@@ -31,6 +31,8 @@ export class DashboardService {
       khachRows,
       ganToi,
       danhGiaRows,
+      thanhToanRows,
+      hoanTienRows,
     ] = await Promise.all([
       this.prisma.$queryRaw<
         Record<string, unknown>[]
@@ -200,6 +202,63 @@ export class DashboardService {
         WHERE ngay_xoa IS NULL
           AND hien_thi = 1
       `,
+      this.prisma.$queryRaw<
+        Record<string, unknown>[]
+      >`
+        SELECT
+          COALESCE(
+            SUM(
+              CASE
+                WHEN trang_thai IN (
+                  'DA_THANH_TOAN',
+                  'HOAN_MOT_PHAN',
+                  'DA_HOAN_TIEN'
+                )
+                AND DATE(DATE_ADD(thoi_gian_thanh_toan, INTERVAL 7 HOUR)) =
+                  ${ngayChon}
+                THEN so_tien
+                ELSE 0
+              END
+            ),
+            0
+          ) AS da_thu_hom_nay,
+          SUM(
+            CASE
+              WHEN trang_thai = 'CHO_THANH_TOAN'
+              THEN 1
+              ELSE 0
+            END
+          ) AS cho_thanh_toan
+        FROM thanh_toan
+      `,
+      this.prisma.$queryRaw<
+        Record<string, unknown>[]
+      >`
+        SELECT
+          COALESCE(
+            SUM(
+              CASE
+                WHEN trang_thai = 'DA_HOAN'
+                AND DATE(DATE_ADD(thoi_gian_hoan, INTERVAL 7 HOUR)) =
+                  ${ngayChon}
+                THEN so_tien
+                ELSE 0
+              END
+            ),
+            0
+          ) AS da_hoan_hom_nay,
+          SUM(
+            CASE
+              WHEN trang_thai IN (
+                'CHO_HOAN',
+                'DANG_XU_LY'
+              )
+              THEN 1
+              ELSE 0
+            END
+          ) AS cho_hoan_tien
+        FROM hoan_tien
+      `,
     ]);
 
     return {
@@ -216,6 +275,21 @@ export class DashboardService {
       danhGia: this.chuanHoaSo(
         danhGiaRows[0] ?? {},
       ),
+      taiChinh: {
+        ...this.chuanHoaSo(
+          thanhToanRows[0] ?? {},
+        ),
+        ...this.chuanHoaSo(
+          hoanTienRows[0] ?? {},
+        ),
+        thucThuHomNay:
+          Number(
+            thanhToanRows[0]?.da_thu_hom_nay ?? 0,
+          ) -
+          Number(
+            hoanTienRows[0]?.da_hoan_hom_nay ?? 0,
+          ),
+      },
       datBanGanToi: ganToi,
     };
   }

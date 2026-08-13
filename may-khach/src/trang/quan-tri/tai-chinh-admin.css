@@ -1,0 +1,32 @@
+.admin-finance-filters {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 190px 180px;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-finance-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 30px;
+}
+
+.admin-finance-row > :last-child {
+  text-align: right;
+}
+
+.admin-refund-card + .admin-refund-card {
+  margin-top: 12px;
+}
+
+.admin-config-card {
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .admin-finance-filters {
+    grid-template-columns: 1fr;
+  }
+}

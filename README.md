@@ -142,6 +142,32 @@ Hệ thống hiện có:
 - dashboard, báo cáo và nhật ký hoạt động;
 - giao diện public, tài khoản khách hàng và quản trị.
 
+<!-- PHASE10_FINANCE_HANDOFF -->
+## Luồng đặt bàn có món và thanh toán
+
+Luồng public hiện hỗ trợ đặt bàn thuần hoặc chọn món trước:
+
+```text
+Thông tin & thời gian
+→ Chọn bàn
+→ Chọn món trước (tùy chọn)
+→ Ưu đãi & thanh toán
+→ Hoàn tất
+```
+
+Các nguyên tắc chính:
+
+- giá món, mã ưu đãi, tiền cọc và tổng thanh toán trước do Backend tính lại; Frontend không phải nguồn quyết định số tiền;
+- mã ưu đãi áp dụng trên giá trị món đặt trước, không áp dụng cho booking chỉ giữ bàn;
+- booking có số tiền cần thu sẽ sinh payment intent;
+- môi trường demo hỗ trợ phương thức `MO_PHONG`; production không tự bật mô phỏng thanh toán;
+- thanh toán thành công có idempotency và tự xác nhận booking đang chờ;
+- payment quá hạn được hủy và giải phóng bàn;
+- hủy booking đủ điều kiện có thể sinh hoàn tiền; `MO_PHONG` hoàn ngay, gateway thật có thể để trạng thái chờ xử lý;
+- Dashboard/Báo cáo dùng thời điểm thu/hoàn tiền thực tế và quy đổi ngày theo múi giờ Việt Nam.
+
+Database hiện có 27 model/table, bao gồm `chi_tiet_dat_mon`, `thanh_toan` và `hoan_tien`. Với database đã tồn tại từ bản cũ, dùng migration `co-so-du-lieu/20260813_phase10a_dat_mon_thanh_toan.sql`; với database mới, import trực tiếp SQL chuẩn.
+
 ## Quy ước contract
 
 - MySQL dùng `snake_case`.
@@ -161,3 +187,18 @@ Các file tên `PHẦN ...`, `PHAN_...` là tài liệu/spec theo từng giai đ
 4. Tài liệu lịch sử.
 
 Xem hướng dẫn trình diễn và bàn giao tại `HUONG_DAN_CHAY_VA_DEMO.md`.
+
+
+### Phase 10Q — quota sử dụng khuyến mãi
+
+Khuyến mãi hỗ trợ `so_luot_toi_da` (tổng lượt) và
+`so_luot_moi_khach` (giới hạn theo số điện thoại). Bảng
+`su_dung_khuyen_mai` lưu ledger `DA_GIU` / `DA_DUNG` / `DA_HUY`;
+`DA_GIU` và `DA_DUNG` cùng chiếm quota, còn `DA_HUY` đã trả lượt.
+
+Khi tạo booking, backend khóa promotion row bằng `FOR UPDATE` trước khi
+giữ quota, vì vậy hai khách tranh lượt cuối chỉ một booking được giữ.
+Thanh toán thành công chuyển `DA_GIU -> DA_DUNG`; timeout hoặc hủy trước
+khi sử dụng chuyển `DA_GIU -> DA_HUY`. Quote chỉ kiểm tra quota để báo
+sớm cho giao diện; transaction tạo booking vẫn là nguồn quyết định cuối
+cùng. Schema hiện có **27 Prisma models / 27 bảng MySQL**.

@@ -1,0 +1,71 @@
+.customer-preorder-list,
+.customer-finance-box {
+  display: grid;
+  gap: 10px;
+}
+
+.customer-preorder-row,
+.customer-finance-row,
+.customer-refund-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customer-preorder-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.customer-preorder-row:last-child {
+  border-bottom: 0;
+}
+
+.customer-finance-box {
+  padding: 14px 16px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 12px;
+  background: var(--ant-color-bg-container);
+}
+
+.customer-finance-row {
+  min-height: 30px;
+}
+
+.customer-finance-row.total {
+  font-size: 16px;
+}
+
+.customer-payment-card + .customer-payment-card {
+  margin-top: 12px;
+}
+
+.customer-refund-item {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--ant-color-fill-quaternary);
+}
+
+.customer-refund-heading {
+  margin-bottom: 8px;
+}
+
+.customer-refund-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--ant-color-border);
+}
+
+@media (max-width: 575px) {
+  .customer-finance-row {
+    align-items: flex-start;
+  }
+
+  .customer-finance-row > :last-child {
+    text-align: right;
+  }
+}

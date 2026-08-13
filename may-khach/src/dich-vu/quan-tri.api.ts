@@ -16,6 +16,13 @@ export interface DashboardData {
   banAn: Record<string, number>;
   khachHang: Record<string, number>;
   danhGia: Record<string, number>;
+  taiChinh: {
+    daThuHomNay: number;
+    daHoanHomNay: number;
+    thucThuHomNay: number;
+    choThanhToan: number;
+    choHoanTien: number;
+  };
   datBanGanToi: DatBan[];
 }
 

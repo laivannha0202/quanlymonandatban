@@ -1,7 +1,10 @@
 import {
   CalendarOutlined,
+  CreditCardOutlined,
   EyeOutlined,
+  GiftOutlined,
   PlusOutlined,
+  ShoppingOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -12,6 +15,7 @@ import {
   Card,
   DatePicker,
   Descriptions,
+  Divider,
   Drawer,
   Flex,
   Form,
@@ -34,10 +38,12 @@ import { datBanApi } from '@/dich-vu/dat-ban.api';
 import { LoiApi } from '@/dich-vu/http';
 import type { BanAnPhuongAn, DatBan } from '@/kieu/nghiep-vu';
 import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
+import { dinhDangTien } from '@/cau-hinh/dinh-dang';
 import { dinhDangGio, dinhDangNgay, dinhDangNgayGio } from '@/cau-hinh/ngay-gio';
 import { CanhBaoLoi } from '@/thanh-phan/canh-bao-loi';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
 import { TrangThai } from '@/thanh-phan/trang-thai';
+import './dat-ban-finance-detail.css';
 
 type HanhDong = 'xac-nhan' | 'check-in' | 'hoan-thanh' | 'khong-den' | 'huy';
 
@@ -64,6 +70,47 @@ const tenNguonDat: Record<string, string> = {
   FACEBOOK: 'Facebook',
   TRUC_TIEP: 'Trực tiếp',
   KHAC: 'Khác',
+};
+
+
+const tenTrangThaiThanhToan: Record<string, string> = {
+  CHO_THANH_TOAN: 'Chờ thanh toán',
+  DA_THANH_TOAN: 'Đã thanh toán',
+  THAT_BAI: 'Thất bại',
+  DA_HUY: 'Đã hủy',
+  DA_HOAN_TIEN: 'Đã hoàn tiền',
+  HOAN_MOT_PHAN: 'Hoàn một phần',
+};
+
+const mauTrangThaiThanhToan: Record<string, string> = {
+  CHO_THANH_TOAN: 'gold',
+  DA_THANH_TOAN: 'green',
+  THAT_BAI: 'red',
+  DA_HUY: 'default',
+  DA_HOAN_TIEN: 'cyan',
+  HOAN_MOT_PHAN: 'blue',
+};
+
+const tenTrangThaiHoanTien: Record<string, string> = {
+  CHO_HOAN: 'Chờ hoàn',
+  DANG_XU_LY: 'Đang xử lý',
+  DA_HOAN: 'Đã hoàn',
+  THAT_BAI: 'Thất bại',
+};
+
+const mauTrangThaiHoanTien: Record<string, string> = {
+  CHO_HOAN: 'gold',
+  DANG_XU_LY: 'blue',
+  DA_HOAN: 'green',
+  THAT_BAI: 'red',
+};
+
+const tenPhuongThucThanhToan: Record<string, string> = {
+  MO_PHONG: 'Mô phỏng',
+  VNPAY: 'VNPay',
+  MOMO: 'MoMo',
+  CHUYEN_KHOAN: 'Chuyển khoản',
+  TIEN_MAT: 'Tiền mặt',
 };
 
 const tenHanhDong: Record<string, string> = {
@@ -580,7 +627,7 @@ export function QuanTriDatBan() {
       </Card>
 
       <Drawer
-        width={560}
+        width={680}
         open={Boolean(chiTietId)}
         onClose={() => setChiTietId(null)}
         title={chiTiet ? `Đặt bàn ${chiTiet.maDatBan}` : 'Chi tiết đặt bàn'}
@@ -642,6 +689,245 @@ export function QuanTriDatBan() {
               <Descriptions.Item label="Ghi chú khách">{chiTiet.ghiChuKhach || '—'}</Descriptions.Item>
               <Descriptions.Item label="Ghi chú nội bộ">{ghiChuNoiBo(chiTiet) || '—'}</Descriptions.Item>
             </Descriptions>
+
+
+            <Divider titlePlacement="start">
+              <Space>
+                <ShoppingOutlined />
+                Món đặt trước
+              </Space>
+            </Divider>
+
+            {chiTiet.monAn?.length ? (
+              <div className="admin-booking-preorder-list">
+                {chiTiet.monAn.map((item) => (
+                  <div
+                    key={`${item.monAnId}-${item.id ?? ''}`}
+                    className="admin-booking-finance-row admin-booking-preorder-row"
+                  >
+                    <div>
+                      <Typography.Text strong>
+                        {item.tenMon}
+                      </Typography.Text>
+                      <div>
+                        <Typography.Text type="secondary">
+                          {dinhDangTien(item.donGia)} × {item.soLuong}
+                        </Typography.Text>
+                      </div>
+                      {item.ghiChu ? (
+                        <Typography.Text
+                          type="secondary"
+                          className="admin-booking-preorder-note"
+                        >
+                          Ghi chú: {item.ghiChu}
+                        </Typography.Text>
+                      ) : null}
+                    </div>
+                    <strong>{dinhDangTien(item.thanhTien)}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Alert
+                type="info"
+                showIcon
+                message="Đặt bàn này không có món đặt trước."
+              />
+            )}
+
+            <Divider titlePlacement="start">
+              <Space>
+                <GiftOutlined />
+                Ưu đãi & số tiền
+              </Space>
+            </Divider>
+
+            <div className="admin-booking-finance-box">
+              <div className="admin-booking-finance-row">
+                <span>Tiền món</span>
+                <strong>
+                  {dinhDangTien(chiTiet.tamTinhMon ?? 0)}
+                </strong>
+              </div>
+              <div className="admin-booking-finance-row">
+                <span>Giảm giá</span>
+                <strong>
+                  -{dinhDangTien(chiTiet.tienGiam ?? 0)}
+                </strong>
+              </div>
+              {chiTiet.maKhuyenMaiApDung ? (
+                <div className="admin-booking-finance-row">
+                  <span>Mã ưu đãi</span>
+                  <Space wrap>
+                    <Tag color="green">
+                      {chiTiet.maKhuyenMaiApDung}
+                    </Tag>
+                    {chiTiet.khuyenMai?.tenKhuyenMai ? (
+                      <Typography.Text type="secondary">
+                        {chiTiet.khuyenMai.tenKhuyenMai}
+                      </Typography.Text>
+                    ) : null}
+                  </Space>
+                </div>
+              ) : null}
+              <div className="admin-booking-finance-row">
+                <span>Cọc giữ bàn</span>
+                <strong>
+                  {dinhDangTien(chiTiet.tienCoc ?? 0)}
+                </strong>
+              </div>
+              <Divider />
+              <div className="admin-booking-finance-row total">
+                <span>Thanh toán trước</span>
+                <strong>
+                  {dinhDangTien(
+                    chiTiet.tongThanhToanTruoc ?? 0,
+                  )}
+                </strong>
+              </div>
+            </div>
+
+            <Divider titlePlacement="start">
+              <Space>
+                <CreditCardOutlined />
+                Thanh toán & hoàn tiền
+              </Space>
+            </Divider>
+
+            {chiTiet.thanhToan?.length ? (
+              <Space
+                direction="vertical"
+                size={12}
+                style={{ width: '100%' }}
+              >
+                {chiTiet.thanhToan.map((payment) => (
+                  <Card
+                    key={payment.id}
+                    size="small"
+                    className="admin-booking-payment-card"
+                    title={
+                      <Space wrap>
+                        <Typography.Text strong>
+                          {payment.maThanhToan}
+                        </Typography.Text>
+                        <Tag
+                          color={
+                            mauTrangThaiThanhToan[
+                              payment.trangThai
+                            ] || 'default'
+                          }
+                        >
+                          {tenTrangThaiThanhToan[
+                            payment.trangThai
+                          ] || payment.trangThai}
+                        </Tag>
+                      </Space>
+                    }
+                  >
+                    <div className="admin-booking-finance-row">
+                      <span>Số tiền</span>
+                      <strong>
+                        {dinhDangTien(payment.soTien)}
+                      </strong>
+                    </div>
+                    <div className="admin-booking-finance-row">
+                      <span>Phương thức</span>
+                      <span>
+                        {tenPhuongThucThanhToan[
+                          payment.phuongThuc
+                        ] || payment.phuongThuc}
+                      </span>
+                    </div>
+                    {payment.thoiGianThanhToan ? (
+                      <div className="admin-booking-finance-row">
+                        <span>Thanh toán lúc</span>
+                        <span>
+                          {dinhDangNgayGio(
+                            payment.thoiGianThanhToan,
+                          )}
+                        </span>
+                      </div>
+                    ) : null}
+                    {payment.maGiaoDichCong ? (
+                      <div className="admin-booking-finance-row">
+                        <span>Mã giao dịch</span>
+                        <Typography.Text copyable>
+                          {payment.maGiaoDichCong}
+                        </Typography.Text>
+                      </div>
+                    ) : null}
+
+                    {payment.hoanTien?.length ? (
+                      <div className="admin-booking-refund-list">
+                        {payment.hoanTien.map((refund) => (
+                          <div
+                            key={refund.id}
+                            className="admin-booking-refund-item"
+                          >
+                            <Flex
+                              justify="space-between"
+                              align="center"
+                              gap={8}
+                              wrap
+                            >
+                              <Typography.Text strong>
+                                {refund.maHoanTien}
+                              </Typography.Text>
+                              <Tag
+                                color={
+                                  mauTrangThaiHoanTien[
+                                    refund.trangThai
+                                  ] || 'default'
+                                }
+                              >
+                                {tenTrangThaiHoanTien[
+                                  refund.trangThai
+                                ] || refund.trangThai}
+                              </Tag>
+                            </Flex>
+                            <div className="admin-booking-finance-row">
+                              <span>Số tiền hoàn</span>
+                              <strong>
+                                {dinhDangTien(refund.soTien)}
+                              </strong>
+                            </div>
+                            <div className="admin-booking-finance-row">
+                              <span>Lý do</span>
+                              <span>{refund.lyDo || '—'}</span>
+                            </div>
+                            {refund.thoiGianHoan ? (
+                              <div className="admin-booking-finance-row">
+                                <span>Hoàn lúc</span>
+                                <span>
+                                  {dinhDangNgayGio(
+                                    refund.thoiGianHoan,
+                                  )}
+                                </span>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </Card>
+                ))}
+              </Space>
+            ) : (
+              <Alert
+                type="info"
+                showIcon
+                message="Đặt bàn này chưa có giao dịch thanh toán."
+              />
+            )}
+
+            {coQuyen('THANH_TOAN_XEM') ? (
+              <Button
+                href="/quan-tri/thanh-toan"
+                icon={<CreditCardOutlined />}
+              >
+                Mở quản lý thanh toán
+              </Button>
+            ) : null}
 
             {chiTiet.lichSu?.length ? (
               <div>

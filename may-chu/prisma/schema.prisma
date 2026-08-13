@@ -61,6 +61,24 @@ model chi_tiet_dat_ban {
   @@index([ban_an_id, dat_ban_id], map: "idx_ctdb_ban_an_dat_ban")
 }
 
+model chi_tiet_dat_mon {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  dat_ban_id BigInt   @db.UnsignedBigInt
+  mon_an_id  BigInt   @db.UnsignedBigInt
+  ma_mon     String   @db.VarChar(30)
+  ten_mon    String   @db.VarChar(200)
+  don_gia    Decimal  @db.Decimal(15, 2)
+  so_luong   Int      @db.UnsignedInt
+  thanh_tien Decimal  @db.Decimal(15, 2)
+  ghi_chu    String?  @db.VarChar(500)
+  ngay_tao   DateTime @default(now())
+  dat_ban    dat_ban  @relation(fields: [dat_ban_id], references: [id], onDelete: Cascade, map: "fk_ctdm_dat_ban")
+  mon_an     mon_an   @relation(fields: [mon_an_id], references: [id], map: "fk_ctdm_mon_an")
+
+  @@unique([dat_ban_id, mon_an_id], map: "uk_ctdm_dat_ban_mon")
+  @@index([mon_an_id], map: "idx_ctdm_mon_an")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model danh_gia {
   id                 BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
@@ -106,41 +124,52 @@ model danh_muc_mon {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model dat_ban {
-  id                   BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
-  ma_dat_ban           String             @unique(map: "uk_dat_ban_ma") @db.VarChar(40)
-  khach_hang_id        BigInt?            @db.UnsignedBigInt
-  khu_vuc_id           BigInt?            @db.UnsignedBigInt
-  ho_ten               String             @db.VarChar(150)
-  so_dien_thoai        String             @db.VarChar(30)
-  email                String?            @db.VarChar(255)
-  ngay_dat             DateTime           @db.Date
-  gio_bat_dau          DateTime
-  gio_ket_thuc         DateTime
-  so_nguoi             Int                @db.UnsignedInt
-  trang_thai           String             @default("CHO_XAC_NHAN") @db.VarChar(30)
-  nguon_dat            String             @default("WEBSITE") @db.VarChar(30)
-  kieu_xep_ban         String             @default("HE_THONG_SAP_XEP") @db.VarChar(30)
-  ghi_chu_khach        String?            @db.Text
-  ghi_chu_noi_bo       String?            @db.Text
-  nguoi_xac_nhan_id    BigInt?            @db.UnsignedBigInt
-  thoi_gian_xac_nhan   DateTime?
-  thoi_gian_check_in   DateTime?
-  thoi_gian_hoan_thanh DateTime?
-  thoi_gian_huy        DateTime?
-  ly_do_huy            String?            @db.Text
-  ngay_tao             DateTime           @default(now())
-  ngay_cap_nhat        DateTime           @default(now())
-  chi_tiet_dat_ban     chi_tiet_dat_ban[]
-  danh_gia             danh_gia?
-  khach_hang           khach_hang?        @relation(fields: [khach_hang_id], references: [id], map: "fk_dat_ban_khach_hang")
-  khu_vuc              khu_vuc?           @relation(fields: [khu_vuc_id], references: [id], map: "fk_dat_ban_khu_vuc")
-  nhan_vien            nhan_vien?         @relation(fields: [nguoi_xac_nhan_id], references: [id], map: "fk_dat_ban_nguoi_xac_nhan")
-  lich_su_dat_ban      lich_su_dat_ban[]
-  thong_bao            thong_bao[]
+  id                    BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  ma_dat_ban            String             @unique(map: "uk_dat_ban_ma") @db.VarChar(40)
+  khach_hang_id         BigInt?            @db.UnsignedBigInt
+  khu_vuc_id            BigInt?            @db.UnsignedBigInt
+  khuyen_mai_id         BigInt?            @db.UnsignedBigInt
+  ho_ten                String             @db.VarChar(150)
+  so_dien_thoai         String             @db.VarChar(30)
+  email                 String?            @db.VarChar(255)
+  ngay_dat              DateTime           @db.Date
+  gio_bat_dau           DateTime
+  gio_ket_thuc          DateTime
+  so_nguoi              Int                @db.UnsignedInt
+  trang_thai            String             @default("CHO_XAC_NHAN") @db.VarChar(30)
+  nguon_dat             String             @default("WEBSITE") @db.VarChar(30)
+  kieu_xep_ban          String             @default("HE_THONG_SAP_XEP") @db.VarChar(30)
+  ma_khuyen_mai_ap_dung String?            @db.VarChar(50)
+  tam_tinh_mon          Decimal            @default(0) @db.Decimal(15, 2)
+  tien_giam             Decimal            @default(0) @db.Decimal(15, 2)
+  tien_coc              Decimal            @default(0) @db.Decimal(15, 2)
+  tong_thanh_toan_truoc Decimal            @default(0) @db.Decimal(15, 2)
+  ghi_chu_khach         String?            @db.Text
+  ghi_chu_noi_bo        String?            @db.Text
+  nguoi_xac_nhan_id     BigInt?            @db.UnsignedBigInt
+  thoi_gian_xac_nhan    DateTime?
+  thoi_gian_check_in    DateTime?
+  thoi_gian_hoan_thanh  DateTime?
+  thoi_gian_huy         DateTime?
+  ly_do_huy             String?            @db.Text
+  ngay_tao              DateTime           @default(now())
+  ngay_cap_nhat         DateTime           @default(now())
+  chi_tiet_dat_ban      chi_tiet_dat_ban[]
+  chi_tiet_dat_mon      chi_tiet_dat_mon[]
+  danh_gia              danh_gia?
+  khach_hang            khach_hang?        @relation(fields: [khach_hang_id], references: [id], map: "fk_dat_ban_khach_hang")
+  khu_vuc               khu_vuc?           @relation(fields: [khu_vuc_id], references: [id], map: "fk_dat_ban_khu_vuc")
+  khuyen_mai            khuyen_mai?        @relation(fields: [khuyen_mai_id], references: [id], map: "fk_dat_ban_khuyen_mai")
+  nhan_vien             nhan_vien?         @relation(fields: [nguoi_xac_nhan_id], references: [id], map: "fk_dat_ban_nguoi_xac_nhan")
+  lich_su_dat_ban       lich_su_dat_ban[]
+  thanh_toan            thanh_toan[]
+  thong_bao             thong_bao[]
+  su_dung_khuyen_mai    su_dung_khuyen_mai?
 
   @@index([nguoi_xac_nhan_id], map: "fk_dat_ban_nguoi_xac_nhan")
   @@index([khach_hang_id], map: "idx_dat_ban_khach_hang")
   @@index([khu_vuc_id], map: "idx_dat_ban_khu_vuc")
+  @@index([khuyen_mai_id], map: "idx_dat_ban_khuyen_mai")
   @@index([ngay_dat], map: "idx_dat_ban_ngay")
   @@index([nguon_dat], map: "idx_dat_ban_nguon")
   @@index([so_dien_thoai], map: "idx_dat_ban_sdt")
@@ -231,12 +260,16 @@ model khuyen_mai {
   gia_tri               Decimal   @db.Decimal(15, 2)
   gia_tri_don_toi_thieu Decimal?  @db.Decimal(15, 2)
   giam_toi_da           Decimal?  @db.Decimal(15, 2)
+  so_luot_toi_da        Int?      @db.UnsignedInt
+  so_luot_moi_khach     Int?      @db.UnsignedInt
   ngay_bat_dau          DateTime
   ngay_ket_thuc         DateTime
   trang_thai            String    @default("HOAT_DONG") @db.VarChar(30)
   ngay_tao              DateTime  @default(now())
   ngay_cap_nhat         DateTime  @default(now())
   ngay_xoa              DateTime?
+  dat_ban               dat_ban[]
+  su_dung_khuyen_mai    su_dung_khuyen_mai[]
 
   @@index([ngay_bat_dau, ngay_ket_thuc], map: "idx_khuyen_mai_thoi_gian")
   @@index([trang_thai], map: "idx_khuyen_mai_trang_thai")
@@ -277,23 +310,24 @@ model lien_ket_ban {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model mon_an {
-  id             BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
-  ma_mon         String         @unique(map: "uk_mon_an_ma") @db.VarChar(30)
-  danh_muc_id    BigInt         @db.UnsignedBigInt
-  ten_mon        String         @db.VarChar(200)
-  duong_dan      String         @unique(map: "uk_mon_an_duong_dan") @db.VarChar(220)
-  mo_ta          String?        @db.Text
-  gia            Decimal        @db.Decimal(15, 2)
-  gia_khuyen_mai Decimal?       @db.Decimal(15, 2)
-  hinh_anh_chinh String?        @db.VarChar(500)
-  la_mon_noi_bat Boolean        @default(false)
-  con_mon        Boolean        @default(true)
-  trang_thai     String         @default("HOAT_DONG") @db.VarChar(30)
-  ngay_tao       DateTime       @default(now())
-  ngay_cap_nhat  DateTime       @default(now())
-  ngay_xoa       DateTime?
-  hinh_anh_mon   hinh_anh_mon[]
-  danh_muc_mon   danh_muc_mon   @relation(fields: [danh_muc_id], references: [id], map: "fk_mon_an_danh_muc")
+  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  ma_mon           String             @unique(map: "uk_mon_an_ma") @db.VarChar(30)
+  danh_muc_id      BigInt             @db.UnsignedBigInt
+  ten_mon          String             @db.VarChar(200)
+  duong_dan        String             @unique(map: "uk_mon_an_duong_dan") @db.VarChar(220)
+  mo_ta            String?            @db.Text
+  gia              Decimal            @db.Decimal(15, 2)
+  gia_khuyen_mai   Decimal?           @db.Decimal(15, 2)
+  hinh_anh_chinh   String?            @db.VarChar(500)
+  la_mon_noi_bat   Boolean            @default(false)
+  con_mon          Boolean            @default(true)
+  trang_thai       String             @default("HOAT_DONG") @db.VarChar(30)
+  ngay_tao         DateTime           @default(now())
+  ngay_cap_nhat    DateTime           @default(now())
+  ngay_xoa         DateTime?
+  hinh_anh_mon     hinh_anh_mon[]
+  chi_tiet_dat_mon chi_tiet_dat_mon[]
+  danh_muc_mon     danh_muc_mon       @relation(fields: [danh_muc_id], references: [id], map: "fk_mon_an_danh_muc")
 
   @@index([con_mon], map: "idx_mon_an_con_mon")
   @@index([danh_muc_id], map: "idx_mon_an_danh_muc")
@@ -375,6 +409,72 @@ model quyen {
   @@index([nhom_quyen], map: "idx_quyen_nhom")
 }
 
+
+// PHASE10Q_PROMOTION_QUOTA
+// Một booking chỉ giữ/dùng tối đa một mã. Quota theo khách dùng snapshot
+// số điện thoại đã chuẩn hóa để cả khách không có tài khoản vẫn bị giới hạn.
+model su_dung_khuyen_mai {
+  id                   BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  khuyen_mai_id        BigInt     @db.UnsignedBigInt
+  dat_ban_id           BigInt     @unique(map: "uk_su_dung_khuyen_mai_dat_ban") @db.UnsignedBigInt
+  so_dien_thoai_chuan  String     @db.VarChar(30)
+  trang_thai           String     @default("DA_GIU") @db.VarChar(30)
+  thoi_gian_giu        DateTime   @default(now())
+  thoi_gian_su_dung    DateTime?
+  thoi_gian_huy        DateTime?
+  ly_do_huy            String?    @db.VarChar(255)
+  ngay_tao             DateTime   @default(now())
+  ngay_cap_nhat        DateTime   @default(now())
+
+  khuyen_mai           khuyen_mai @relation(fields: [khuyen_mai_id], references: [id], map: "fk_su_dung_khuyen_mai_khuyen_mai")
+  dat_ban              dat_ban    @relation(fields: [dat_ban_id], references: [id], map: "fk_su_dung_khuyen_mai_dat_ban")
+
+  @@index([khuyen_mai_id, trang_thai], map: "idx_su_dung_khuyen_mai_km_trang_thai")
+  @@index([khuyen_mai_id, so_dien_thoai_chuan, trang_thai], map: "idx_su_dung_khuyen_mai_khach")
+}
+
+model thanh_toan {
+  id                   BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  ma_thanh_toan        String      @unique(map: "uk_thanh_toan_ma") @db.VarChar(50)
+  dat_ban_id           BigInt      @db.UnsignedBigInt
+  so_tien              Decimal     @db.Decimal(15, 2)
+  phuong_thuc          String      @default("MO_PHONG") @db.VarChar(30)
+  trang_thai           String      @default("CHO_THANH_TOAN") @db.VarChar(30)
+  ma_giao_dich_cong    String?     @db.VarChar(150)
+  khoa_idempotency     String?     @unique(map: "uk_thanh_toan_idempotency") @db.VarChar(120)
+  ghi_chu              String?     @db.VarChar(500)
+  thoi_gian_thanh_toan DateTime?
+  ngay_tao             DateTime    @default(now())
+  ngay_cap_nhat        DateTime    @default(now())
+  dat_ban              dat_ban     @relation(fields: [dat_ban_id], references: [id], map: "fk_thanh_toan_dat_ban")
+  hoan_tien            hoan_tien[]
+
+  @@unique([phuong_thuc, ma_giao_dich_cong], map: "uk_thanh_toan_cong")
+  @@index([dat_ban_id, ngay_tao], map: "idx_thanh_toan_dat_ban")
+  @@index([trang_thai, ngay_tao], map: "idx_thanh_toan_trang_thai")
+}
+
+model hoan_tien {
+  id                 BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  ma_hoan_tien       String     @unique(map: "uk_hoan_tien_ma") @db.VarChar(50)
+  thanh_toan_id      BigInt     @db.UnsignedBigInt
+  so_tien            Decimal    @db.Decimal(15, 2)
+  ly_do              String     @db.VarChar(500)
+  trang_thai         String     @default("CHO_HOAN") @db.VarChar(30)
+  ma_giao_dich_cong  String?    @unique(map: "uk_hoan_tien_giao_dich_cong") @db.VarChar(150)
+  khoa_idempotency   String?    @unique(map: "uk_hoan_tien_idempotency") @db.VarChar(120)
+  nguoi_thuc_hien_id BigInt?    @db.UnsignedBigInt
+  thoi_gian_hoan     DateTime?
+  ngay_tao           DateTime   @default(now())
+  ngay_cap_nhat      DateTime   @default(now())
+  thanh_toan         thanh_toan @relation(fields: [thanh_toan_id], references: [id], map: "fk_hoan_tien_thanh_toan")
+  tai_khoan          tai_khoan? @relation(fields: [nguoi_thuc_hien_id], references: [id], map: "fk_hoan_tien_nguoi_thuc_hien")
+
+  @@index([thanh_toan_id, ngay_tao], map: "idx_hoan_tien_thanh_toan")
+  @@index([trang_thai, ngay_tao], map: "idx_hoan_tien_trang_thai")
+  @@index([nguoi_thuc_hien_id], map: "idx_hoan_tien_nguoi_thuc_hien")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model tai_khoan {
@@ -396,6 +496,7 @@ model tai_khoan {
   lich_su_dat_ban        lich_su_dat_ban[]
   nhan_vien              nhan_vien?
   nhat_ky_hoat_dong      nhat_ky_hoat_dong[]
+  hoan_tien              hoan_tien[]
   vai_tro                vai_tro                  @relation(fields: [vai_tro_id], references: [id], map: "fk_tai_khoan_vai_tro")
   thong_bao              thong_bao[]
   token_dat_lai_mat_khau token_dat_lai_mat_khau[]

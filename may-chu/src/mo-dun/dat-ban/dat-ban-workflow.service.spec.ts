@@ -66,6 +66,11 @@ describe('DatBanWorkflowService - concurrency guard', () => {
       repository,
       cauHinh,
       { taoChoDatBan: jest.fn() } as any,
+      {
+        danhDauKhuyenMaiDaDungTrongTransaction: jest.fn().mockResolvedValue(1),
+        giaiPhongKhuyenMaiTrongTransaction: jest.fn().mockResolvedValue(1),
+        hoanTienDatBanTrongTransaction: jest.fn(),
+      } as any,
       { ghiNhan: jest.fn() } as any,
     );
 
@@ -167,6 +172,7 @@ describe('DatBanWorkflowService - trạng thái bàn', () => {
       repository,
       { laySo: jest.fn() } as any,
       { taoChoDatBan: jest.fn() } as any,
+      { hoanTienDatBanTrongTransaction: jest.fn() } as any,
       nhatKy,
     );
 

@@ -23,6 +23,7 @@ const ThongBao = lazy(() => import('@/trang/khach-hang/thong-bao').then((m) => (
 const DanhGiaCuaToi = lazy(() => import('@/trang/khach-hang/danh-gia').then((m) => ({ default: m.DanhGiaCuaToi })));
 const Dashboard = lazy(() => import('@/trang/quan-tri/dashboard').then((m) => ({ default: m.Dashboard })));
 const QuanTriDatBan = lazy(() => import('@/trang/quan-tri/dat-ban').then((m) => ({ default: m.QuanTriDatBan })));
+const QuanTriThanhToan = lazy(() => import('@/trang/quan-tri/thanh-toan').then((m) => ({ default: m.QuanTriThanhToan })));
 const QuanTriKhuVuc = lazy(() => import('@/trang/quan-tri/khu-vuc').then((m) => ({ default: m.QuanTriKhuVuc })));
 const QuanTriBanAn = lazy(() => import('@/trang/quan-tri/ban-an').then((m) => ({ default: m.QuanTriBanAn })));
 const QuanTriMonAn = lazy(() => import('@/trang/quan-tri/mon-an').then((m) => ({ default: m.QuanTriMonAn })));
@@ -35,6 +36,7 @@ const QuanTriBaoCao = lazy(() => import('@/trang/quan-tri/bao-cao').then((m) => 
 const QuanTriVaiTro = lazy(() => import('@/trang/quan-tri/vai-tro').then((m) => ({ default: m.QuanTriVaiTro })));
 const QuanTriGioHoatDong = lazy(() => import('@/trang/quan-tri/gio-hoat-dong').then((m) => ({ default: m.QuanTriGioHoatDong })));
 const QuanTriNgayDacBiet = lazy(() => import('@/trang/quan-tri/ngay-dac-biet').then((m) => ({ default: m.QuanTriNgayDacBiet })));
+const QuanTriCauHinhDatBan = lazy(() => import('@/trang/quan-tri/cau-hinh-dat-ban').then((m) => ({ default: m.QuanTriCauHinhDatBan })));
 const KhongTimThay = lazy(() => import('@/trang/khong-tim-thay').then((m) => ({ default: m.KhongTimThay })));
 
 function DangTaiTrang() {
@@ -66,6 +68,7 @@ export function UngDung() {
       <Route path="quan-tri" element={<BoCucQuanTri />}>
         <Route index element={<BaoVeQuyen quyen="DASHBOARD_XEM"><Dashboard /></BaoVeQuyen>} />
         <Route path="dat-ban" element={<BaoVeQuyen quyen="DAT_BAN_XEM"><QuanTriDatBan /></BaoVeQuyen>} />
+        <Route path="thanh-toan" element={<BaoVeQuyen quyen="THANH_TOAN_XEM"><QuanTriThanhToan /></BaoVeQuyen>} />
         <Route path="khu-vuc" element={<BaoVeQuyen quyen="KHU_VUC_XEM"><QuanTriKhuVuc /></BaoVeQuyen>} />
         <Route path="ban-an" element={<BaoVeQuyen quyen={['BAN_AN_XEM', 'KHU_VUC_XEM']}><QuanTriBanAn /></BaoVeQuyen>} />
         <Route path="danh-muc-mon" element={<BaoVeQuyen quyen="DANH_MUC_MON_XEM"><QuanTriDanhMucMon /></BaoVeQuyen>} />
@@ -78,6 +81,7 @@ export function UngDung() {
         <Route path="vai-tro" element={<BaoVeQuyen quyen="VAI_TRO_QUAN_LY"><QuanTriVaiTro /></BaoVeQuyen>} />
         <Route path="gio-hoat-dong" element={<BaoVeQuyen quyen="LICH_PHUC_VU_QUAN_LY"><QuanTriGioHoatDong /></BaoVeQuyen>} />
         <Route path="ngay-dac-biet" element={<BaoVeQuyen quyen="LICH_PHUC_VU_QUAN_LY"><QuanTriNgayDacBiet /></BaoVeQuyen>} />
+        <Route path="cau-hinh-dat-ban" element={<BaoVeQuyen quyen="CAU_HINH_DAT_BAN_QUAN_LY"><QuanTriCauHinhDatBan /></BaoVeQuyen>} />
       </Route>
     </Route>
     <Route path="*" element={<KhongTimThay />} />

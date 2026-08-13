@@ -20,9 +20,14 @@ describe('TimBanTrongService', () => {
 
   let service: TimBanTrongService;
 
+  const thanhToan = {
+    huyDatBanQuaHanThanhToan: jest.fn().mockResolvedValue(0),
+  };
+
   beforeEach(() => {
+    thanhToan.huyDatBanQuaHanThanhToan.mockClear();
     jest.clearAllMocks();
-    service = new TimBanTrongService(prisma, cauHinh, lichPhucVu, repository, lienKetBan);
+    service = new TimBanTrongService(prisma, cauHinh, lichPhucVu, repository, lienKetBan, thanhToan as never);
     cauHinh.layBoolean.mockResolvedValue(true);
     cauHinh.laySo.mockResolvedValue(20);
     lichPhucVu.tinhGioKetThuc.mockResolvedValue('21:00');

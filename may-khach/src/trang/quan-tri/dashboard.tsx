@@ -18,6 +18,7 @@ import {
   Row,
   Skeleton,
   Space,
+  Statistic,
   Table,
   Tag,
   Typography,
@@ -26,6 +27,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
+import { dinhDangTien } from '@/cau-hinh/dinh-dang';
 import { quanTriApi } from '@/dich-vu/quan-tri.api';
 import { LoiApi } from '@/dich-vu/http';
 import { TrangThai } from '@/thanh-phan/trang-thai';
@@ -79,6 +81,12 @@ export function Dashboard() {
   const daHuy = so(d?.datBan.daHuy);
   const khongDen = so(d?.datBan.khongDen);
   const tongKhach = so(d?.datBan.tongKhach);
+
+  const daThuHomNay = so(d?.taiChinh.daThuHomNay);
+  const daHoanHomNay = so(d?.taiChinh.daHoanHomNay);
+  const thucThuHomNay = so(d?.taiChinh.thucThuHomNay);
+  const choThanhToan = so(d?.taiChinh.choThanhToan);
+  const choHoanTien = so(d?.taiChinh.choHoanTien);
 
   const banTrong = so(d?.banAn.trong);
   const banDangDung = so(d?.banAn.dangSuDung);
@@ -213,6 +221,79 @@ export function Dashboard() {
               </Col>
             </Row>
           </section>
+
+
+          {coQuyen('THANH_TOAN_XEM') ? (
+            <section
+              className="admin-dashboard-finance-kpis"
+              aria-label="Tài chính hôm nay"
+            >
+              <div className="admin-ops-section-heading">
+                <div>
+                  <Typography.Text type="secondary">
+                    TÀI CHÍNH HÔM NAY
+                  </Typography.Text>
+                  <Typography.Title level={4}>
+                    Tiền đã thực sự thu và hoàn
+                  </Typography.Title>
+                </div>
+                <Button
+                  type="link"
+                  onClick={() => navigate('/quan-tri/thanh-toan')}
+                >
+                  Mở thanh toán <ArrowRightOutlined />
+                </Button>
+              </div>
+
+              <Row gutter={[14, 14]}>
+                <Col xs={24} sm={12} xl={6}>
+                  <Card>
+                    <Statistic
+                      title="Thực thu hôm nay"
+                      value={thucThuHomNay}
+                      formatter={(value) =>
+                        dinhDangTien(Number(value))
+                      }
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} sm={12} xl={6}>
+                  <Card>
+                    <Statistic
+                      title="Đã thu"
+                      value={daThuHomNay}
+                      formatter={(value) =>
+                        dinhDangTien(Number(value))
+                      }
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} sm={12} xl={6}>
+                  <Card>
+                    <Statistic
+                      title="Đã hoàn"
+                      value={daHoanHomNay}
+                      formatter={(value) =>
+                        dinhDangTien(Number(value))
+                      }
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} sm={12} xl={6}>
+                  <Card>
+                    <Statistic
+                      title="Đang chờ xử lý"
+                      value={choThanhToan + choHoanTien}
+                      suffix="giao dịch"
+                    />
+                    <Typography.Text type="secondary">
+                      {choThanhToan} chờ thanh toán · {choHoanTien} chờ hoàn
+                    </Typography.Text>
+                  </Card>
+                </Col>
+              </Row>
+            </section>
+          ) : null}
 
           <Row gutter={[18, 18]} align="top" className="admin-ops-main-row">
             <Col xs={24} xl={16}>

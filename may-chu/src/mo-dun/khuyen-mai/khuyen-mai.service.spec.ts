@@ -18,6 +18,8 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
     giam_toi_da: {
       toString: () => '50000.00',
     },
+    so_luot_toi_da: null,
+    so_luot_moi_khach: null,
     ngay_bat_dau: new Date(
       '2026-08-01T00:00:00.000Z',
     ),
@@ -39,6 +41,9 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
       khuyen_mai: {
         findMany: jest.fn().mockResolvedValue([row]),
         count: jest.fn().mockResolvedValue(1),
+      },
+      su_dung_khuyen_mai: {
+        groupBy: jest.fn().mockResolvedValue([]),
       },
     } as any;
 
@@ -65,6 +70,9 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
     const prisma = {
       khuyen_mai: {
         findMany: jest.fn().mockResolvedValue([row]),
+      },
+      su_dung_khuyen_mai: {
+        groupBy: jest.fn().mockResolvedValue([]),
       },
     } as any;
 
@@ -98,6 +106,9 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
       khuyen_mai: {
         findFirst: jest.fn().mockResolvedValue(row),
         update: jest.fn(),
+      },
+      su_dung_khuyen_mai: {
+        groupBy: jest.fn().mockResolvedValue([]),
       },
     } as any;
 
@@ -135,7 +146,37 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
         findFirst: jest.fn().mockResolvedValue(row),
         update: jest.fn().mockResolvedValue(updated),
       },
+      su_dung_khuyen_mai: {
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
     } as any;
+
+    prisma.$transaction = jest.fn(
+      async (
+        callback: (
+          tx: {
+            $queryRaw: jest.Mock;
+            su_dung_khuyen_mai: {
+              count: jest.Mock;
+            };
+            khuyen_mai: typeof prisma.khuyen_mai;
+          },
+        ) => unknown,
+      ) =>
+        callback({
+          $queryRaw: jest.fn().mockResolvedValue([
+            {
+              id: 1n,
+              so_luot_toi_da: null,
+              so_luot_moi_khach: null,
+            },
+          ]),
+          su_dung_khuyen_mai: {
+            count: jest.fn().mockResolvedValue(0),
+          },
+          khuyen_mai: prisma.khuyen_mai,
+        }),
+    );
 
     const nhatKy = {
       ghiNhan: jest.fn().mockResolvedValue(undefined),
@@ -171,6 +212,9 @@ describe('KhuyenMaiService - Prisma CRUD', () => {
       khuyen_mai: {
         findFirst: jest.fn().mockResolvedValue(row),
         update: jest.fn().mockResolvedValue({}),
+      },
+      su_dung_khuyen_mai: {
+        groupBy: jest.fn().mockResolvedValue([]),
       },
     } as any;
 

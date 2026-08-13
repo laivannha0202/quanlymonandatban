@@ -45,6 +45,8 @@ type FormData = {
   giaTri: number;
   giaTriDonToiThieu?: number;
   giamToiDa?: number;
+  soLuotToiDa?: number;
+  soLuotMoiKhach?: number;
   ngayBatDau: Dayjs;
   ngayKetThuc: Dayjs;
   trangThai?: TrangThaiHoatDong;
@@ -184,6 +186,10 @@ export function QuanTriKhuyenMai() {
       giaTri: r.giaTri,
       giaTriDonToiThieu: r.giaTriDonToiThieu ?? undefined,
       giamToiDa: r.giamToiDa ?? undefined,
+      soLuotToiDa:
+        r.soLuotToiDa ?? undefined,
+      soLuotMoiKhach:
+        r.soLuotMoiKhach ?? undefined,
       ngayBatDau: dayjs(r.ngayBatDau),
       ngayKetThuc: dayjs(r.ngayKetThuc),
       trangThai: r.trangThai,
@@ -214,6 +220,14 @@ export function QuanTriKhuyenMai() {
         v.loaiGiam === 'PHAN_TRAM' && v.giamToiDa != null
           ? Number(v.giamToiDa)
           : undefined,
+      soLuotToiDa:
+        v.soLuotToiDa == null
+          ? null
+          : Number(v.soLuotToiDa),
+      soLuotMoiKhach:
+        v.soLuotMoiKhach == null
+          ? null
+          : Number(v.soLuotMoiKhach),
       ngayBatDau: v.ngayBatDau.toISOString(),
       ngayKetThuc: v.ngayKetThuc.toISOString(),
       trangThai: v.trangThai,
@@ -309,7 +323,7 @@ export function QuanTriKhuyenMai() {
           rowKey="id"
           loading={tai}
           dataSource={danhSach}
-          scroll={{ x: 1180 }}
+          scroll={{ x: 1380 }}
           pagination={{ pageSize: 20, showSizeChanger: false }}
           columns={[
             {
@@ -344,11 +358,42 @@ export function QuanTriKhuyenMai() {
               render: (_: unknown, r: KhuyenMai) => (
                 <div className="admin-promo-condition">
                   <span>
-                    Đơn tối thiểu:{' '}
+                    Giá trị món tối thiểu:{' '}
                     <strong>
                       {r.giaTriDonToiThieu != null
                         ? dinhDangTien(r.giaTriDonToiThieu)
                         : 'Không yêu cầu'}
+                    </strong>
+                  </span>
+                </div>
+              ),
+            },
+
+            {
+              title: 'Lượt sử dụng',
+              width: 200,
+              render: (_: unknown, r: KhuyenMai) => (
+                <div className="admin-promo-condition">
+                  <span>
+                    Đã dùng: <strong>{r.soLuotDaDung}</strong>
+                  </span>
+                  <span>
+                    Đang giữ: <strong>{r.soLuotDaGiu}</strong>
+                  </span>
+                  <span>
+                    Còn lại:{' '}
+                    <strong>
+                      {r.soLuotConLai == null
+                        ? 'Không giới hạn'
+                        : `${r.soLuotConLai}/${r.soLuotToiDa}`}
+                    </strong>
+                  </span>
+                  <span>
+                    Mỗi khách:{' '}
+                    <strong>
+                      {r.soLuotMoiKhach == null
+                        ? 'Không giới hạn'
+                        : `${r.soLuotMoiKhach} lượt`}
                     </strong>
                   </span>
                 </div>
@@ -596,14 +641,14 @@ export function QuanTriKhuyenMai() {
           <div className="admin-promo-form-section">
             <div className="admin-promo-form-heading">
               <strong>Điều kiện áp dụng</strong>
-              <span>Điều kiện giá trị đơn để nhân viên áp dụng chương trình tại nhà hàng.</span>
+              <span>Điều kiện giá trị món đặt trước để áp dụng mã cho booking.</span>
             </div>
 
             <Space className="form-row" align="start" wrap>
               <Form.Item
                 name="giaTriDonToiThieu"
-                label="Đơn tối thiểu"
-                extra="Bỏ trống nếu không yêu cầu."
+                label="Giá trị món tối thiểu"
+                extra="Tính trên tổng giá trị món trước khi áp dụng mã; bỏ trống nếu không yêu cầu."
               >
                 <InputNumber
                   min={0}
@@ -613,6 +658,60 @@ export function QuanTriKhuyenMai() {
                 />
               </Form.Item>
 
+
+              <Form.Item
+                name="soLuotToiDa"
+                label="Tổng lượt sử dụng"
+                extra="Bỏ trống nếu chương trình không giới hạn tổng lượt."
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (value == null) return Promise.resolve();
+                      const n = Number(value);
+                      return Number.isInteger(n) && n >= 1
+                        ? Promise.resolve()
+                        : Promise.reject(
+                            new Error('Tổng lượt phải là số nguyên từ 1 trở lên.'),
+                          );
+                    },
+                  },
+                ]}
+              >
+                <InputNumber
+                  min={1}
+                  step={1}
+                  precision={0}
+                  addonAfter="lượt"
+                  style={{ width: 220 }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="soLuotMoiKhach"
+                label="Tối đa mỗi khách"
+                extra="Tính theo số điện thoại khách; bỏ trống nếu không giới hạn."
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (value == null) return Promise.resolve();
+                      const n = Number(value);
+                      return Number.isInteger(n) && n >= 1
+                        ? Promise.resolve()
+                        : Promise.reject(
+                            new Error('Số lượt mỗi khách phải là số nguyên từ 1 trở lên.'),
+                          );
+                    },
+                  },
+                ]}
+              >
+                <InputNumber
+                  min={1}
+                  step={1}
+                  precision={0}
+                  addonAfter="lượt"
+                  style={{ width: 220 }}
+                />
+              </Form.Item>
               <Form.Item name="trangThai" label="Trạng thái">
                 <Select
                   style={{ width: 190 }}

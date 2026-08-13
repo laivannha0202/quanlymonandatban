@@ -29,12 +29,41 @@ import {
   type BaoCaoDatBan,
   type BaoCaoKhachHang,
 } from '@/dich-vu/he-thong.api';
+import { dinhDangTien } from '@/cau-hinh/dinh-dang';
 import { LoiApi } from '@/dich-vu/http';
 
 const { RangePicker } = DatePicker;
 
 const docSo = (r: Record<string, string | number>, key: string) => Number(r[key] ?? 0);
 const docChuoi = (r: Record<string, string | number>, key: string) => String(r[key] ?? '');
+
+const MAU_THUONG_HIEU = '#8f2d21';
+const MAU_DANH_GIA = '#b77828';
+
+const BANG_MAU_TRANG_THAI = [
+  '#8f2d21',
+  '#b64d3b',
+  '#d17a5f',
+  '#6d4a42',
+  '#c39a7b',
+  '#7b2f28',
+];
+
+const TEN_TRANG_THAI_DAT_BAN: Record<string, string> = {
+  CHO_XAC_NHAN: 'Chờ xác nhận',
+  DA_XAC_NHAN: 'Đã xác nhận',
+  DA_CHECK_IN: 'Đã check-in',
+  DA_HOAN_THANH: 'Đã hoàn thành',
+  DA_HUY: 'Đã hủy',
+  KHONG_DEN: 'Không đến',
+};
+
+const tenTrangThaiDatBan = (ma: string) =>
+  TEN_TRANG_THAI_DAT_BAN[ma] ??
+  ma
+    .toLowerCase()
+    .replaceAll('_', ' ')
+    .replace(/^./, (kyTu) => kyTu.toUpperCase());
 
 export function QuanTriBaoCao() {
   const [khoangNgay, setKhoangNgay] = useState<[Dayjs, Dayjs]>([
@@ -79,20 +108,34 @@ export function QuanTriBaoCao() {
 
   const duLieuTheoNgay = useMemo(
     () =>
-      (datBan?.theoNgay ?? []).map((r) => ({
-        ngay: docChuoi(r, 'ngay'),
-        soDatBan: docSo(r, 'soDatBan'),
-        soKhach: docSo(r, 'soKhach'),
-      })),
+      (datBan?.theoNgay ?? []).map((r) => {
+        const ngay = docChuoi(r, 'ngay');
+
+        return {
+          ngay,
+          ngayHienThi:
+            dayjs(ngay).isValid()
+              ? dayjs(ngay).format('DD/MM')
+              : ngay,
+          soDatBan: docSo(r, 'soDatBan'),
+          soKhach: docSo(r, 'soKhach'),
+        };
+      }),
     [datBan],
   );
 
   const duLieuTrangThai = useMemo(
     () =>
-      (datBan?.theoTrangThai ?? []).map((r) => ({
-        trangThai: docChuoi(r, 'trangThai'),
-        soLuong: docSo(r, 'soLuong'),
-      })),
+      (datBan?.theoTrangThai ?? []).map((r) => {
+        const trangThai = docChuoi(r, 'trangThai');
+
+        return {
+          trangThai,
+          nhanTrangThai:
+            tenTrangThaiDatBan(trangThai),
+          soLuong: docSo(r, 'soLuong'),
+        };
+      }),
     [datBan],
   );
 
@@ -188,6 +231,7 @@ export function QuanTriBaoCao() {
                       <Statistic
                         title="Tỷ lệ hoàn thành"
                         value={thongKeDatBan.tyLeHoanThanh ?? 0}
+                        precision={2}
                         suffix="%"
                       />
                     </Card>
@@ -200,12 +244,28 @@ export function QuanTriBaoCao() {
                       {duLieuTheoNgay.length ? (
                         <Line
                           data={duLieuTheoNgay}
-                          xField="ngay"
+                          xField="ngayHienThi"
                           yField="soDatBan"
                           height={320}
-                          point={{ size: 3 }}
+                          smooth
+                          style={{
+                            stroke: MAU_THUONG_HIEU,
+                            lineWidth: 2.5,
+                          }}
+                          point={{
+                            size: 4,
+                            style: {
+                              fill: MAU_THUONG_HIEU,
+                              stroke: '#fff',
+                              lineWidth: 2,
+                            },
+                          }}
                           axis={{
-                            x: { labelAutoRotate: false, labelAutoHide: true },
+                            x: {
+                              title: 'Ngày',
+                              labelAutoRotate: false,
+                              labelAutoHide: true,
+                            },
                             y: { title: 'Số đặt bàn' },
                           }}
                         />
@@ -221,10 +281,17 @@ export function QuanTriBaoCao() {
                         <Pie
                           data={duLieuTrangThai}
                           angleField="soLuong"
-                          colorField="trangThai"
+                          colorField="nhanTrangThai"
                           innerRadius={0.58}
                           height={320}
-                          legend={{ position: 'bottom' }}
+                          scale={{
+                            color: {
+                              range: BANG_MAU_TRANG_THAI,
+                            },
+                          }}
+                          legend={{
+                            position: 'bottom',
+                          }}
                           label={false}
                         />
                       ) : (
@@ -241,8 +308,14 @@ export function QuanTriBaoCao() {
                       xField="tenKhuVuc"
                       yField="soLuong"
                       height={300}
+                      style={{
+                        fill: MAU_THUONG_HIEU,
+                      }}
                       axis={{
-                        x: { labelAutoRotate: false },
+                        x: {
+                          title: 'Khu vực',
+                          labelAutoRotate: false,
+                        },
                         y: { title: 'Số đặt bàn' },
                       }}
                     />
@@ -250,6 +323,115 @@ export function QuanTriBaoCao() {
                     <Empty description="Chưa có dữ liệu khu vực" />
                   )}
                 </Card>
+              </>
+            ),
+          },
+          {
+            key: 'tai-chinh',
+            label: <span><BarChartOutlined /> Tài chính</span>,
+            children: (
+              <>
+                <Alert
+                  type="info"
+                  showIcon
+                  className="mb-16"
+                  message="Số tiền dựa trên giao dịch thực tế"
+                  description="Đã thu và đã hoàn được tính theo thời điểm giao dịch trong khoảng ngày đang chọn; booking chưa thanh toán không được tính là doanh thu."
+                />
+
+                <Row gutter={[16, 16]} className="mb-24">
+                  <Col xs={12} xl={6}>
+                    <Card className="admin-kpi-card">
+                      <span className="admin-kpi-icon">
+                        <BarChartOutlined />
+                      </span>
+                      <Statistic
+                        title="Đã thu"
+                        value={datBan?.taiChinh.tongDaThu ?? 0}
+                        formatter={(value) =>
+                          dinhDangTien(Number(value))
+                        }
+                      />
+                    </Card>
+                  </Col>
+
+                  <Col xs={12} xl={6}>
+                    <Card className="admin-kpi-card">
+                      <span className="admin-kpi-icon">
+                        <BarChartOutlined />
+                      </span>
+                      <Statistic
+                        title="Đã hoàn"
+                        value={datBan?.taiChinh.tongDaHoan ?? 0}
+                        formatter={(value) =>
+                          dinhDangTien(Number(value))
+                        }
+                      />
+                    </Card>
+                  </Col>
+
+                  <Col xs={12} xl={6}>
+                    <Card className="admin-kpi-card">
+                      <span className="admin-kpi-icon">
+                        <BarChartOutlined />
+                      </span>
+                      <Statistic
+                        title="Thực thu"
+                        value={datBan?.taiChinh.thucThu ?? 0}
+                        formatter={(value) =>
+                          dinhDangTien(Number(value))
+                        }
+                      />
+                    </Card>
+                  </Col>
+
+                  <Col xs={12} xl={6}>
+                    <Card className="admin-kpi-card">
+                      <span className="admin-kpi-icon">
+                        <BarChartOutlined />
+                      </span>
+                      <Statistic
+                        title="Giao dịch đã thu"
+                        value={
+                          datBan?.taiChinh
+                            .soGiaoDichDaThu ?? 0
+                        }
+                      />
+                    </Card>
+                  </Col>
+                </Row>
+
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={12}>
+                    <Card title="Thanh toán đang chờ">
+                      <Statistic
+                        value={
+                          datBan?.taiChinh
+                            .soGiaoDichChoThanhToan ?? 0
+                        }
+                        suffix="giao dịch"
+                      />
+                      <Typography.Text type="secondary">
+                        Hàng đợi hiện tại, không giới hạn theo khoảng ngày báo cáo.
+                      </Typography.Text>
+                    </Card>
+                  </Col>
+
+                  <Col xs={24} md={12}>
+                    <Card title="Hoàn tiền đang chờ">
+                      <Statistic
+                        value={
+                          datBan?.taiChinh
+                            .soYeuCauHoanChoXuLy ?? 0
+                        }
+                        suffix="yêu cầu"
+                      />
+                      <Typography.Text type="secondary">
+                        Đã hoàn thành {datBan?.taiChinh.soGiaoDichHoan ?? 0} giao dịch hoàn trong khoảng ngày.
+                      </Typography.Text>
+                    </Card>
+                  </Col>
+                </Row>
               </>
             ),
           },
@@ -339,7 +521,13 @@ export function QuanTriBaoCao() {
                       xField="soSao"
                       yField="soLuong"
                       height={300}
-                      axis={{ y: { title: 'Số đánh giá' } }}
+                      style={{
+                        fill: MAU_DANH_GIA,
+                      }}
+                      axis={{
+                        x: { title: 'Mức đánh giá' },
+                        y: { title: 'Số đánh giá' },
+                      }}
                     />
                   ) : (
                     <Empty description="Chưa có dữ liệu đánh giá" />

@@ -306,7 +306,7 @@ export class DatBanRepository {
 
     if (!datBan) return null;
 
-    const [chiTietBan, lichSu] =
+    const [chiTietBan, chiTietMon, taiChinh, thanhToan, lichSu] =
       await Promise.all([
         this.prisma.chi_tiet_dat_ban.findMany({
           where: {
@@ -325,6 +325,83 @@ export class DatBanRepository {
                     ten_khu_vuc: true,
                   },
                 },
+              },
+            },
+          },
+        }),
+        this.prisma.chi_tiet_dat_mon.findMany({
+          where: {
+            dat_ban_id: id,
+          },
+          orderBy: [
+            { ngay_tao: 'asc' },
+            { id: 'asc' },
+          ],
+          select: {
+            id: true,
+            mon_an_id: true,
+            ma_mon: true,
+            ten_mon: true,
+            don_gia: true,
+            so_luong: true,
+            thanh_tien: true,
+            ghi_chu: true,
+          },
+        }),
+        this.prisma.dat_ban.findUnique({
+          where: { id },
+          select: {
+            khuyen_mai_id: true,
+            ma_khuyen_mai_ap_dung: true,
+            tam_tinh_mon: true,
+            tien_giam: true,
+            tien_coc: true,
+            tong_thanh_toan_truoc: true,
+            khuyen_mai: {
+              select: {
+                id: true,
+                ma_khuyen_mai: true,
+                ten_khuyen_mai: true,
+                loai_giam: true,
+                gia_tri: true,
+                gia_tri_don_toi_thieu: true,
+                giam_toi_da: true,
+              },
+            },
+          },
+        }),
+        this.prisma.thanh_toan.findMany({
+          where: {
+            dat_ban_id: id,
+          },
+          orderBy: [
+            { ngay_tao: 'asc' },
+            { id: 'asc' },
+          ],
+          select: {
+            id: true,
+            ma_thanh_toan: true,
+            so_tien: true,
+            phuong_thuc: true,
+            trang_thai: true,
+            ma_giao_dich_cong: true,
+            thoi_gian_thanh_toan: true,
+            ngay_tao: true,
+            hoan_tien: {
+              orderBy: [
+                { ngay_tao: 'asc' },
+                { id: 'asc' },
+              ],
+              select: {
+                id: true,
+                ma_hoan_tien: true,
+                so_tien: true,
+                ly_do: true,
+                trang_thai: true,
+                ma_giao_dich_cong: true,
+                nguoi_thuc_hien_id: true,
+                thoi_gian_hoan: true,
+                ngay_tao: true,
               },
             },
           },
@@ -367,6 +444,66 @@ export class DatBanRepository {
     return {
       ...datBan,
       banAns,
+      monAn: chiTietMon.map((item) => ({
+        id: item.id,
+        mon_an_id: item.mon_an_id,
+        ma_mon: item.ma_mon,
+        ten_mon: item.ten_mon,
+        don_gia: Number(item.don_gia),
+        so_luong: item.so_luong,
+        thanh_tien: Number(item.thanh_tien),
+        ghi_chu: item.ghi_chu,
+      })),
+      khuyen_mai_id: taiChinh?.khuyen_mai_id ?? null,
+      ma_khuyen_mai_ap_dung:
+        taiChinh?.ma_khuyen_mai_ap_dung ?? null,
+      tam_tinh_mon: Number(taiChinh?.tam_tinh_mon ?? 0),
+      tien_giam: Number(taiChinh?.tien_giam ?? 0),
+      tien_coc: Number(taiChinh?.tien_coc ?? 0),
+      tong_thanh_toan_truoc:
+        Number(taiChinh?.tong_thanh_toan_truoc ?? 0),
+      thanhToan: thanhToan.map((item) => ({
+        id: item.id,
+        ma_thanh_toan: item.ma_thanh_toan,
+        so_tien: Number(item.so_tien),
+        phuong_thuc: item.phuong_thuc,
+        trang_thai: item.trang_thai,
+        ma_giao_dich_cong: item.ma_giao_dich_cong,
+        thoi_gian_thanh_toan: item.thoi_gian_thanh_toan,
+        ngay_tao: item.ngay_tao,
+        hoan_tien: item.hoan_tien.map((refund) => ({
+          id: refund.id,
+          ma_hoan_tien: refund.ma_hoan_tien,
+          so_tien: Number(refund.so_tien),
+          ly_do: refund.ly_do,
+          trang_thai: refund.trang_thai,
+          ma_giao_dich_cong: refund.ma_giao_dich_cong,
+          nguoi_thuc_hien_id: refund.nguoi_thuc_hien_id,
+          thoi_gian_hoan: refund.thoi_gian_hoan,
+          ngay_tao: refund.ngay_tao,
+        })),
+      })),
+      khuyenMai: taiChinh?.khuyen_mai
+        ? {
+            id: taiChinh.khuyen_mai.id,
+            ma_khuyen_mai:
+              taiChinh.khuyen_mai.ma_khuyen_mai,
+            ten_khuyen_mai:
+              taiChinh.khuyen_mai.ten_khuyen_mai,
+            loai_giam:
+              taiChinh.khuyen_mai.loai_giam,
+            gia_tri:
+              Number(taiChinh.khuyen_mai.gia_tri),
+            gia_tri_don_toi_thieu:
+              taiChinh.khuyen_mai.gia_tri_don_toi_thieu == null
+                ? null
+                : Number(taiChinh.khuyen_mai.gia_tri_don_toi_thieu),
+            giam_toi_da:
+              taiChinh.khuyen_mai.giam_toi_da == null
+                ? null
+                : Number(taiChinh.khuyen_mai.giam_toi_da),
+          }
+        : null,
       lichSu,
     };
   }

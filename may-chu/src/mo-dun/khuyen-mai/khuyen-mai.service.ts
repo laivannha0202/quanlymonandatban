@@ -20,6 +20,8 @@ type KhuyenMaiRow = {
   gia_tri: GiaTriSo;
   gia_tri_don_toi_thieu: GiaTriSo | null;
   giam_toi_da: GiaTriSo | null;
+  so_luot_toi_da: number | null;
+  so_luot_moi_khach: number | null;
   ngay_bat_dau: Date;
   ngay_ket_thuc: Date;
   trang_thai: string;
@@ -51,8 +53,15 @@ export class KhuyenMaiService {
       ],
     });
 
-    return rows.map((row) =>
-      this.toView(row as KhuyenMaiRow),
+    const danhSach =
+      await this.toViewsWithQuota(
+        rows as KhuyenMaiRow[],
+      );
+
+    return danhSach.filter(
+      (item) =>
+        item.so_luot_con_lai == null ||
+        item.so_luot_con_lai > 0,
     );
   }
 
@@ -86,10 +95,13 @@ export class KhuyenMaiService {
       this.prisma.khuyen_mai.count({ where }),
     ]);
 
+    const danhSach =
+      await this.toViewsWithQuota(
+        rows as KhuyenMaiRow[],
+      );
+
     return {
-      danhSach: rows.map((row) =>
-        this.toView(row as KhuyenMaiRow),
-      ),
+      danhSach,
       phanTrang: {
         trang: dto.trang,
         kichThuoc: dto.kichThuoc,
@@ -115,7 +127,12 @@ export class KhuyenMaiService {
       );
     }
 
-    return this.toView(row as KhuyenMaiRow);
+    const [view] =
+      await this.toViewsWithQuota([
+        row as KhuyenMaiRow,
+      ]);
+
+    return view;
   }
 
   async tao(
@@ -129,6 +146,11 @@ export class KhuyenMaiService {
       dto.ngayBatDau,
       dto.ngayKetThuc,
       dto.giamToiDa ?? null,
+    );
+
+    this.kiemTraQuota(
+      dto.soLuotToiDa ?? null,
+      dto.soLuotMoiKhach ?? null,
     );
 
     await this.damBaoMaKhongTrung(dto.maKhuyenMai);
@@ -146,13 +168,20 @@ export class KhuyenMaiService {
           dto.loaiGiam === 'PHAN_TRAM'
             ? dto.giamToiDa ?? null
             : null,
+        so_luot_toi_da:
+          dto.soLuotToiDa ?? null,
+        so_luot_moi_khach:
+          dto.soLuotMoiKhach ?? null,
         ngay_bat_dau: new Date(dto.ngayBatDau),
         ngay_ket_thuc: new Date(dto.ngayKetThuc),
         trang_thai: dto.trangThai ?? 'HOAT_DONG',
       },
     });
 
-    const moi = this.toView(row as KhuyenMaiRow);
+    const [moi] =
+      await this.toViewsWithQuota([
+        row as KhuyenMaiRow,
+      ]);
 
     await this.nhatKy.ghiNhan({
       taiKhoanId: nguoiDung.taiKhoanId,
@@ -214,6 +243,21 @@ export class KhuyenMaiService {
           ? dto.giamToiDa
           : cu.giam_toi_da;
 
+    const soLuotToiDaMoi =
+      dto.soLuotToiDa !== undefined
+        ? dto.soLuotToiDa
+        : cu.so_luot_toi_da;
+
+    const soLuotMoiKhachMoi =
+      dto.soLuotMoiKhach !== undefined
+        ? dto.soLuotMoiKhach
+        : cu.so_luot_moi_khach;
+
+    this.kiemTraQuota(
+      soLuotToiDaMoi,
+      soLuotMoiKhachMoi,
+    );
+
     this.kiemTra(
       loaiMoi,
       giaTriMoi,
@@ -222,45 +266,183 @@ export class KhuyenMaiService {
       giamToiDaMoi,
     );
 
-    const row = await this.prisma.khuyen_mai.update({
-      where: { id: khuyenMaiId },
-      data: {
-        ...(dto.tenKhuyenMai !== undefined
-          ? { ten_khuyen_mai: dto.tenKhuyenMai }
-          : {}),
-        ...(dto.moTa !== undefined
-          ? { mo_ta: dto.moTa }
-          : {}),
-        ...(dto.loaiGiam !== undefined
-          ? { loai_giam: dto.loaiGiam }
-          : {}),
-        ...(dto.giaTri !== undefined
-          ? { gia_tri: dto.giaTri }
-          : {}),
-        ...(dto.giaTriDonToiThieu !== undefined
-          ? {
-              gia_tri_don_toi_thieu:
-                dto.giaTriDonToiThieu,
-            }
-          : {}),
-        ...(dto.loaiGiam === 'SO_TIEN'
-          ? { giam_toi_da: null }
-          : dto.giamToiDa !== undefined
-            ? { giam_toi_da: dto.giamToiDa }
-            : {}),
-        ...(dto.ngayBatDau !== undefined
-          ? { ngay_bat_dau: new Date(dto.ngayBatDau) }
-          : {}),
-        ...(dto.ngayKetThuc !== undefined
-          ? { ngay_ket_thuc: new Date(dto.ngayKetThuc) }
-          : {}),
-        ...(dto.trangThai !== undefined
-          ? { trang_thai: dto.trangThai }
-          : {}),
-      },
-    });
+    const row =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const [khuyenMaiDaKhoa] =
+            await tx.$queryRaw<
+              Array<{
+                id: bigint;
+                so_luot_toi_da: number | null;
+                so_luot_moi_khach: number | null;
+              }>
+            >`
+              SELECT
+                id,
+                so_luot_toi_da,
+                so_luot_moi_khach
+              FROM khuyen_mai
+              WHERE id = ${khuyenMaiId}
+                AND ngay_xoa IS NULL
+              FOR UPDATE
+            `;
 
-    const moi = this.toView(row as KhuyenMaiRow);
+          if (!khuyenMaiDaKhoa) {
+            throw new LoiNghiepVuException(
+              'KHUYEN_MAI_001',
+              'Không tìm thấy khuyến mãi.',
+              HttpStatus.NOT_FOUND,
+            );
+          }
+
+          const tongMoiTrongTx =
+            dto.soLuotToiDa !== undefined
+              ? dto.soLuotToiDa
+              : khuyenMaiDaKhoa.so_luot_toi_da;
+
+          const moiKhachMoiTrongTx =
+            dto.soLuotMoiKhach !== undefined
+              ? dto.soLuotMoiKhach
+              : khuyenMaiDaKhoa.so_luot_moi_khach;
+
+          const tongDangChiem =
+            await tx.su_dung_khuyen_mai.count({
+              where: {
+                khuyen_mai_id: khuyenMaiId,
+                trang_thai: {
+                  in: ['DA_GIU', 'DA_DUNG'],
+                },
+              },
+            });
+
+          if (
+            tongMoiTrongTx != null &&
+            tongMoiTrongTx < tongDangChiem
+          ) {
+            throw new LoiNghiepVuException(
+              'KHUYEN_MAI_012',
+              `Tổng lượt không thể thấp hơn ${tongDangChiem} lượt đang giữ hoặc đã dùng.`,
+              HttpStatus.CONFLICT,
+            );
+          }
+
+          if (moiKhachMoiTrongTx != null) {
+            const [thongKeLonNhat] =
+              await tx.$queryRaw<
+                Array<{
+                  so_luot_lon_nhat:
+                    bigint | number | null;
+                }>
+              >`
+                SELECT
+                  MAX(thong_ke.so_luot) AS so_luot_lon_nhat
+                FROM (
+                  SELECT
+                    so_dien_thoai_chuan,
+                    COUNT(*) AS so_luot
+                  FROM su_dung_khuyen_mai
+                  WHERE khuyen_mai_id = ${khuyenMaiId}
+                    AND trang_thai IN ('DA_GIU', 'DA_DUNG')
+                  GROUP BY so_dien_thoai_chuan
+                ) AS thong_ke
+              `;
+
+            const lonNhatMoiKhach =
+              thongKeLonNhat?.so_luot_lon_nhat == null
+                ? 0
+                : Number(
+                    thongKeLonNhat.so_luot_lon_nhat,
+                  );
+
+            if (
+              moiKhachMoiTrongTx <
+              lonNhatMoiKhach
+            ) {
+              throw new LoiNghiepVuException(
+                'KHUYEN_MAI_013',
+                `Lượt tối đa mỗi khách không thể thấp hơn ${lonNhatMoiKhach} lượt đang giữ hoặc đã dùng của một khách.`,
+                HttpStatus.CONFLICT,
+              );
+            }
+          }
+
+          return tx.khuyen_mai.update({
+            where: { id: khuyenMaiId },
+            data: {
+              ...(dto.tenKhuyenMai !== undefined
+                ? {
+                    ten_khuyen_mai:
+                      dto.tenKhuyenMai,
+                  }
+                : {}),
+              ...(dto.moTa !== undefined
+                ? { mo_ta: dto.moTa }
+                : {}),
+              ...(dto.loaiGiam !== undefined
+                ? { loai_giam: dto.loaiGiam }
+                : {}),
+              ...(dto.giaTri !== undefined
+                ? { gia_tri: dto.giaTri }
+                : {}),
+              ...(dto.giaTriDonToiThieu !==
+              undefined
+                ? {
+                    gia_tri_don_toi_thieu:
+                      dto.giaTriDonToiThieu,
+                  }
+                : {}),
+              ...(dto.loaiGiam === 'SO_TIEN'
+                ? { giam_toi_da: null }
+                : dto.giamToiDa !== undefined
+                  ? {
+                      giam_toi_da:
+                        dto.giamToiDa,
+                    }
+                  : {}),
+              ...(dto.soLuotToiDa !== undefined
+                ? {
+                    so_luot_toi_da:
+                      dto.soLuotToiDa,
+                  }
+                : {}),
+              ...(dto.soLuotMoiKhach !==
+              undefined
+                ? {
+                    so_luot_moi_khach:
+                      dto.soLuotMoiKhach,
+                  }
+                : {}),
+              ...(dto.ngayBatDau !== undefined
+                ? {
+                    ngay_bat_dau:
+                      new Date(
+                        dto.ngayBatDau,
+                      ),
+                  }
+                : {}),
+              ...(dto.ngayKetThuc !== undefined
+                ? {
+                    ngay_ket_thuc:
+                      new Date(
+                        dto.ngayKetThuc,
+                      ),
+                  }
+                : {}),
+              ...(dto.trangThai !== undefined
+                ? {
+                    trang_thai:
+                      dto.trangThai,
+                  }
+                : {}),
+            },
+          });
+        },
+      );
+
+    const [moi] =
+      await this.toViewsWithQuota([
+        row as KhuyenMaiRow,
+      ]);
 
     await this.nhatKy.ghiNhan({
       taiKhoanId: nguoiDung.taiKhoanId,
@@ -395,7 +577,86 @@ export class KhuyenMaiService {
     }
   }
 
-  private toView(row: KhuyenMaiRow) {
+
+  private async toViewsWithQuota(
+    rows: KhuyenMaiRow[],
+  ) {
+    if (!rows.length) return [];
+
+    const thongKe =
+      await this.prisma.su_dung_khuyen_mai.groupBy({
+        by: ['khuyen_mai_id', 'trang_thai'],
+        where: {
+          khuyen_mai_id: {
+            in: rows.map((row) => row.id),
+          },
+          trang_thai: {
+            in: ['DA_GIU', 'DA_DUNG'],
+          },
+        },
+        _count: {
+          _all: true,
+        },
+      });
+
+    const map = new Map<
+      string,
+      { daGiu: number; daDung: number }
+    >();
+
+    for (const item of thongKe) {
+      const key = item.khuyen_mai_id.toString();
+      const hienTai =
+        map.get(key) ?? {
+          daGiu: 0,
+          daDung: 0,
+        };
+
+      if (item.trang_thai === 'DA_GIU') {
+        hienTai.daGiu += item._count._all;
+      } else if (item.trang_thai === 'DA_DUNG') {
+        hienTai.daDung += item._count._all;
+      }
+
+      map.set(key, hienTai);
+    }
+
+    return rows.map((row) =>
+      this.toView(
+        row,
+        map.get(row.id.toString()),
+      ),
+    );
+  }
+
+  private kiemTraQuota(
+    soLuotToiDa: number | null,
+    soLuotMoiKhach: number | null,
+  ): void {
+    for (const [ten, value] of [
+      ['Tổng lượt sử dụng', soLuotToiDa],
+      ['Lượt tối đa mỗi khách', soLuotMoiKhach],
+    ] as const) {
+      if (
+        value != null &&
+        (!Number.isInteger(value) || value < 1)
+      ) {
+        throw new LoiNghiepVuException(
+          'KHUYEN_MAI_011',
+          `${ten} phải là số nguyên từ 1 trở lên hoặc để trống.`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+  }
+
+  private toView(
+    row: KhuyenMaiRow,
+    thongKe: { daGiu: number; daDung: number } = {
+      daGiu: 0,
+      daDung: 0,
+    },
+  ) {
     const {
       ngay_xoa: _ngayXoa,
       ...duLieu
@@ -412,6 +673,23 @@ export class KhuyenMaiService {
         row.giam_toi_da == null
           ? null
           : Number(row.giam_toi_da),
+      so_luot_toi_da:
+        row.so_luot_toi_da,
+      so_luot_moi_khach:
+        row.so_luot_moi_khach,
+      so_luot_da_giu:
+        thongKe.daGiu,
+      so_luot_da_dung:
+        thongKe.daDung,
+      so_luot_con_lai:
+        row.so_luot_toi_da == null
+          ? null
+          : Math.max(
+              0,
+              row.so_luot_toi_da -
+                thongKe.daGiu -
+                thongKe.daDung,
+            ),
     };
   }
 }

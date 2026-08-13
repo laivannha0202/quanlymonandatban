@@ -52,6 +52,25 @@ Frontend hiện có đầy đủ các khu vực:
 - tài khoản khách: hồ sơ, lịch sử booking, đánh giá, thông báo;
 - quản trị: dashboard, booking, khu vực, bàn, danh mục, món, khách hàng, nhân viên, vai trò/quyền, khuyến mãi, đánh giá, lịch hoạt động, báo cáo.
 
+<!-- PHASE10_FINANCE_HANDOFF -->
+## Đặt bàn 5 bước và tài chính
+
+Trang đặt bàn public hiện theo luồng:
+
+```text
+Thông tin & thời gian
+→ Chọn bàn
+→ Chọn món (tùy chọn)
+→ Ưu đãi & thanh toán
+→ Hoàn tất
+```
+
+Frontend cho phép ghi chú riêng cho từng món, nhưng toàn bộ giá cuối cùng vẫn lấy từ quote Backend. Khi không chọn món, UI không cho áp mã ưu đãi vì mã được định nghĩa trên giá trị món đặt trước.
+
+Payment retry tái sử dụng idempotency key theo `maThanhToan` trong `sessionStorage`, tránh sinh khóa mới cho cùng một giao dịch khi retry trong phiên hiện tại.
+
+Khu vực quản trị có thêm Thanh toán và Cấu hình đặt bàn. Chi tiết booking hiển thị món đặt trước, snapshot ưu đãi, tiền cọc, payment và refund; Dashboard/Báo cáo hiển thị đã thu, đã hoàn, thực thu và các hàng đợi cần xử lý.
+
 ## Contract
 
 - API dùng camelCase ở frontend.

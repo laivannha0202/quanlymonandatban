@@ -29,6 +29,11 @@ export interface KhuyenMai {
   giaTri: number;
   giaTriDonToiThieu?: number | null;
   giamToiDa?: number | null;
+  soLuotToiDa?: number | null;
+  soLuotMoiKhach?: number | null;
+  soLuotDaGiu: number;
+  soLuotDaDung: number;
+  soLuotConLai?: number | null;
   ngayBatDau: string;
   ngayKetThuc: string;
   trangThai: TrangThaiHoatDong;
@@ -80,6 +85,16 @@ export interface VaiTro {
   quyen: Quyen[];
 }
 
+export interface BaoCaoTaiChinh {
+  tongDaThu: number;
+  tongDaHoan: number;
+  thucThu: number;
+  soGiaoDichDaThu: number;
+  soGiaoDichChoThanhToan: number;
+  soGiaoDichHoan: number;
+  soYeuCauHoanChoXuLy: number;
+}
+
 export interface BaoCaoDatBan {
   tuNgay: string;
   denNgay: string;
@@ -88,6 +103,7 @@ export interface BaoCaoDatBan {
   theoTrangThai: Array<Record<string, string | number>>;
   theoNguon: Array<Record<string, string | number>>;
   theoKhuVuc: Array<Record<string, string | number>>;
+  taiChinh: BaoCaoTaiChinh;
 }
 
 export interface BaoCaoKhachHang {
@@ -121,6 +137,8 @@ type KhuyenMaiPayload = {
   giaTri?: number;
   giaTriDonToiThieu?: number;
   giamToiDa?: number;
+  soLuotToiDa?: number | null;
+  soLuotMoiKhach?: number | null;
   ngayBatDau?: string;
   ngayKetThuc?: string;
   trangThai?: TrangThaiHoatDong;

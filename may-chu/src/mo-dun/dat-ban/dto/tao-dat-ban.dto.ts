@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsEmail, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import { MonDatTruocDto } from './tinh-tien-dat-ban.dto';
+import { ArrayMaxSize, IsArray, IsEmail, IsInt, IsOptional, IsString, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export class TaoDatBanDto {
   @ApiProperty({ example: 'Nguyễn Văn A' })
@@ -34,6 +35,15 @@ export class TaoDatBanDto {
   @ApiPropertyOptional({ type: [String], example: ['3'] })
   @IsOptional() @IsArray() @ArrayMaxSize(2) @Matches(/^\d+$/, { each: true })
   banAnIds?: string[];
+
+  @ApiPropertyOptional({ type: [MonDatTruocDto] })
+  @IsOptional() @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true })
+  @Type(() => MonDatTruocDto)
+  monAn?: MonDatTruocDto[];
+
+  @ApiPropertyOptional({ example: 'HV_HE2026', maxLength: 50 })
+  @IsOptional() @IsString() @MaxLength(50)
+  maKhuyenMai?: string;
 
   @ApiPropertyOptional({ example: 'Cho bàn gần cửa sổ' })
   @IsOptional() @IsString() @MaxLength(2000)

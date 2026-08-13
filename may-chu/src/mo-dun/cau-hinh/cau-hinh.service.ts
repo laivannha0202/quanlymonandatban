@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
 import { CapNhatCauHinhDto } from './dto/cap-nhat-cau-hinh.dto';
+import { CapNhatCauHinhDatBanDto } from './dto/cap-nhat-cau-hinh-dat-ban.dto';
 
 @Injectable()
 export class CauHinhService {
@@ -40,6 +41,87 @@ export class CauHinhService {
       where: nhom ? { nhom } : undefined,
       orderBy: [{ nhom: 'asc' }, { khoa: 'asc' }],
     });
+  }
+
+
+  async cauHinhDatBan() {
+    const cacKhoa = [
+      'CHO_PHEP_DAT_MON_TRUOC',
+      'YEU_CAU_THANH_TOAN_MON_TRUOC',
+      'TIEN_COC_GIU_BAN',
+      'THOI_GIAN_HUY_TRUOC_PHUT',
+      'TY_LE_HOAN_TIEN_HUY_DUNG_HAN',
+    ];
+
+    const rows = await this.prisma.cau_hinh.findMany({
+      where: {
+        khoa: {
+          in: cacKhoa,
+        },
+      },
+      select: {
+        khoa: true,
+        gia_tri: true,
+      },
+    });
+
+    if (rows.length !== cacKhoa.length) {
+      const co = new Set(rows.map((item) => item.khoa));
+      const thieu = cacKhoa.filter((khoa) => !co.has(khoa));
+      throw new LoiNghiepVuException(
+        'CAU_HINH_004',
+        `Không tồn tại cấu hình: ${thieu.join(', ')}.`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const map = new Map(
+      rows.map((item) => [item.khoa, item.gia_tri]),
+    );
+
+    return {
+      choPhepDatMonTruoc:
+        map.get('CHO_PHEP_DAT_MON_TRUOC') === 'true',
+      yeuCauThanhToanMonTruoc:
+        map.get('YEU_CAU_THANH_TOAN_MON_TRUOC') === 'true',
+      tienCocGiuBan:
+        Number(map.get('TIEN_COC_GIU_BAN')),
+      thoiGianHuyTruocPhut:
+        Number(map.get('THOI_GIAN_HUY_TRUOC_PHUT')),
+      tyLeHoanTienHuyDungHan:
+        Number(map.get('TY_LE_HOAN_TIEN_HUY_DUNG_HAN')),
+    };
+  }
+
+  async capNhatCauHinhDatBan(
+    dto: CapNhatCauHinhDatBanDto,
+  ) {
+    await this.capNhat({
+      danhSach: [
+        {
+          khoa: 'CHO_PHEP_DAT_MON_TRUOC',
+          giaTri: String(dto.choPhepDatMonTruoc),
+        },
+        {
+          khoa: 'YEU_CAU_THANH_TOAN_MON_TRUOC',
+          giaTri: String(dto.yeuCauThanhToanMonTruoc),
+        },
+        {
+          khoa: 'TIEN_COC_GIU_BAN',
+          giaTri: String(dto.tienCocGiuBan),
+        },
+        {
+          khoa: 'THOI_GIAN_HUY_TRUOC_PHUT',
+          giaTri: String(dto.thoiGianHuyTruocPhut),
+        },
+        {
+          khoa: 'TY_LE_HOAN_TIEN_HUY_DUNG_HAN',
+          giaTri: String(dto.tyLeHoanTienHuyDungHan),
+        },
+      ],
+    });
+
+    return this.cauHinhDatBan();
   }
 
   async layChuoi(khoa: string): Promise<string> {
@@ -185,6 +267,21 @@ export class CauHinhService {
       KHOANG_CACH_SLOT_PHUT: {
         min: 5,
         max: 1440,
+      },
+
+      TIEN_COC_GIU_BAN: {
+        min: 0,
+        max: 100000000,
+      },
+
+      THOI_GIAN_THANH_TOAN_PHUT: {
+        min: 1,
+        max: 1440,
+      },
+
+      TY_LE_HOAN_TIEN_HUY_DUNG_HAN: {
+        min: 0,
+        max: 100,
       },
     };
 

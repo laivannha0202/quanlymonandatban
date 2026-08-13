@@ -223,7 +223,41 @@ CREATE TABLE IF NOT EXISTS lien_ket_ban (
 ) ENGINE=InnoDB;
 
 -- ============================================================================
--- 4. ĐẶT BÀN
+-- 4. KHUYẾN MÃI
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS khuyen_mai (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    ma_khuyen_mai       VARCHAR(50) NOT NULL,
+    ten_khuyen_mai      VARCHAR(200) NOT NULL,
+    mo_ta               TEXT NULL,
+    loai_giam           VARCHAR(30) NOT NULL,
+    gia_tri             DECIMAL(15,2) NOT NULL,
+    gia_tri_don_toi_thieu DECIMAL(15,2) NULL,
+    giam_toi_da         DECIMAL(15,2) NULL,
+    so_luot_toi_da      INT UNSIGNED NULL COMMENT 'NULL = không giới hạn tổng lượt giữ + đã dùng',
+    so_luot_moi_khach   INT UNSIGNED NULL COMMENT 'NULL = không giới hạn số lượt trên một số điện thoại',
+    ngay_bat_dau        DATETIME(3) NOT NULL,
+    ngay_ket_thuc       DATETIME(3) NOT NULL,
+    trang_thai          VARCHAR(30) NOT NULL DEFAULT 'HOAT_DONG',
+    ngay_tao            DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    ngay_cap_nhat       DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    ngay_xoa            DATETIME(3) NULL,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_khuyen_mai_ma (ma_khuyen_mai),
+    KEY idx_khuyen_mai_thoi_gian (ngay_bat_dau, ngay_ket_thuc),
+    KEY idx_khuyen_mai_trang_thai (trang_thai),
+    CONSTRAINT ck_khuyen_mai_thoi_gian CHECK (ngay_ket_thuc > ngay_bat_dau),
+    CONSTRAINT ck_khuyen_mai_loai_giam CHECK (loai_giam IN ('PHAN_TRAM', 'SO_TIEN')),
+    CONSTRAINT ck_khuyen_mai_gia_tri CHECK ((loai_giam = 'PHAN_TRAM' AND gia_tri > 0 AND gia_tri <= 100) OR (loai_giam = 'SO_TIEN' AND gia_tri > 0)),
+    CONSTRAINT ck_khuyen_mai_so_luot_toi_da CHECK (so_luot_toi_da IS NULL OR so_luot_toi_da >= 1),
+    CONSTRAINT ck_khuyen_mai_so_luot_moi_khach CHECK (so_luot_moi_khach IS NULL OR so_luot_moi_khach >= 1),
+    CONSTRAINT ck_khuyen_mai_trang_thai CHECK (trang_thai IN ('HOAT_DONG', 'NGUNG_HOAT_DONG'))
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- 5. ĐẶT BÀN / THANH TOÁN
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS dat_ban (
@@ -231,6 +265,7 @@ CREATE TABLE IF NOT EXISTS dat_ban (
     ma_dat_ban              VARCHAR(40) NOT NULL,
     khach_hang_id           BIGINT UNSIGNED NULL,
     khu_vuc_id              BIGINT UNSIGNED NULL COMMENT 'Khu vực mong muốn/sắp xếp chính',
+    khuyen_mai_id           BIGINT UNSIGNED NULL,
 
     ho_ten                  VARCHAR(150) NOT NULL COMMENT 'Snapshot thông tin khách tại thời điểm đặt',
     so_dien_thoai           VARCHAR(30) NOT NULL,
@@ -244,6 +279,12 @@ CREATE TABLE IF NOT EXISTS dat_ban (
     trang_thai              VARCHAR(30) NOT NULL DEFAULT 'CHO_XAC_NHAN',
     nguon_dat               VARCHAR(30) NOT NULL DEFAULT 'WEBSITE',
     kieu_xep_ban            VARCHAR(30) NOT NULL DEFAULT 'HE_THONG_SAP_XEP',
+
+    ma_khuyen_mai_ap_dung   VARCHAR(50) NULL COMMENT 'Snapshot mã ưu đãi tại thời điểm checkout',
+    tam_tinh_mon            DECIMAL(15,2) NOT NULL DEFAULT 0,
+    tien_giam               DECIMAL(15,2) NOT NULL DEFAULT 0,
+    tien_coc                DECIMAL(15,2) NOT NULL DEFAULT 0,
+    tong_thanh_toan_truoc   DECIMAL(15,2) NOT NULL DEFAULT 0,
 
     ghi_chu_khach           TEXT NULL,
     ghi_chu_noi_bo          TEXT NULL,
@@ -262,6 +303,7 @@ CREATE TABLE IF NOT EXISTS dat_ban (
     UNIQUE KEY uk_dat_ban_ma (ma_dat_ban),
     KEY idx_dat_ban_khach_hang (khach_hang_id),
     KEY idx_dat_ban_khu_vuc (khu_vuc_id),
+    KEY idx_dat_ban_khuyen_mai (khuyen_mai_id),
     KEY idx_dat_ban_sdt (so_dien_thoai),
     KEY idx_dat_ban_ngay (ngay_dat),
     KEY idx_dat_ban_trang_thai_ngay (trang_thai, ngay_dat),
@@ -270,14 +312,60 @@ CREATE TABLE IF NOT EXISTS dat_ban (
 
     CONSTRAINT fk_dat_ban_khach_hang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_dat_ban_khu_vuc FOREIGN KEY (khu_vuc_id) REFERENCES khu_vuc(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_dat_ban_khuyen_mai FOREIGN KEY (khuyen_mai_id) REFERENCES khuyen_mai(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_dat_ban_nguoi_xac_nhan FOREIGN KEY (nguoi_xac_nhan_id) REFERENCES nhan_vien(id) ON DELETE SET NULL ON UPDATE CASCADE,
 
     CONSTRAINT ck_dat_ban_so_nguoi CHECK (so_nguoi >= 1),
     CONSTRAINT ck_dat_ban_thoi_gian CHECK (gio_ket_thuc > gio_bat_dau),
+    CONSTRAINT ck_dat_ban_tam_tinh_mon CHECK (tam_tinh_mon >= 0),
+    CONSTRAINT ck_dat_ban_tien_giam CHECK (tien_giam >= 0 AND tien_giam <= tam_tinh_mon),
+    CONSTRAINT ck_dat_ban_tien_coc CHECK (tien_coc >= 0),
+    CONSTRAINT ck_dat_ban_tong_thanh_toan CHECK (tong_thanh_toan_truoc >= 0),
     CONSTRAINT ck_dat_ban_trang_thai CHECK (trang_thai IN ('CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN', 'DA_HOAN_THANH', 'DA_HUY', 'KHONG_DEN')),
     CONSTRAINT ck_dat_ban_nguon CHECK (nguon_dat IN ('WEBSITE', 'DIEN_THOAI', 'FACEBOOK', 'TRUC_TIEP', 'KHAC')),
     CONSTRAINT ck_dat_ban_kieu_xep CHECK (kieu_xep_ban IN ('KHACH_CHON_BAN', 'HE_THONG_SAP_XEP', 'NHAN_VIEN_SAP_XEP'))
 ) ENGINE=InnoDB;
+
+-- PHASE10Q_PROMOTION_QUOTA
+-- DA_GIU: booking đã chiếm quota nhưng chưa hoàn tất điều kiện sử dụng.
+-- DA_DUNG: quota đã tiêu thụ; hủy/refund sau khi đã dùng không tự trả lượt.
+-- DA_HUY: quota giữ trước đó đã được giải phóng.
+CREATE TABLE IF NOT EXISTS su_dung_khuyen_mai (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    khuyen_mai_id       BIGINT UNSIGNED NOT NULL,
+    dat_ban_id          BIGINT UNSIGNED NOT NULL,
+    so_dien_thoai_chuan VARCHAR(30) NOT NULL,
+    trang_thai          VARCHAR(30) NOT NULL DEFAULT 'DA_GIU',
+    thoi_gian_giu       DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    thoi_gian_su_dung   DATETIME(3) NULL,
+    thoi_gian_huy       DATETIME(3) NULL,
+    ly_do_huy           VARCHAR(255) NULL,
+    ngay_tao            DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    ngay_cap_nhat       DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+                        ON UPDATE CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_su_dung_khuyen_mai_dat_ban (dat_ban_id),
+    KEY idx_su_dung_khuyen_mai_km_trang_thai
+        (khuyen_mai_id, trang_thai),
+    KEY idx_su_dung_khuyen_mai_khach
+        (khuyen_mai_id, so_dien_thoai_chuan, trang_thai),
+
+    CONSTRAINT fk_su_dung_khuyen_mai_khuyen_mai
+        FOREIGN KEY (khuyen_mai_id)
+        REFERENCES khuyen_mai(id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_su_dung_khuyen_mai_dat_ban
+        FOREIGN KEY (dat_ban_id)
+        REFERENCES dat_ban(id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+
+    CONSTRAINT ck_su_dung_khuyen_mai_sdt
+        CHECK (CHAR_LENGTH(TRIM(so_dien_thoai_chuan)) >= 8),
+    CONSTRAINT ck_su_dung_khuyen_mai_trang_thai
+        CHECK (trang_thai IN ('DA_GIU', 'DA_DUNG', 'DA_HUY'))
+) ENGINE=InnoDB;
+
 
 CREATE TABLE IF NOT EXISTS chi_tiet_dat_ban (
     id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -311,8 +399,60 @@ CREATE TABLE IF NOT EXISTS lich_su_dat_ban (
     CONSTRAINT ck_lich_su_trang_thai_moi CHECK (trang_thai_moi IN ('CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_CHECK_IN', 'DA_HOAN_THANH', 'DA_HUY', 'KHONG_DEN'))
 ) ENGINE=InnoDB;
 
+-- Thanh toán cho tiền cọc và món đặt trước. Có thể có nhiều lần thử thanh toán.
+CREATE TABLE IF NOT EXISTS thanh_toan (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    ma_thanh_toan VARCHAR(50) NOT NULL,
+    dat_ban_id BIGINT UNSIGNED NOT NULL,
+    so_tien DECIMAL(15,2) NOT NULL,
+    phuong_thuc VARCHAR(30) NOT NULL DEFAULT 'MO_PHONG',
+    trang_thai VARCHAR(30) NOT NULL DEFAULT 'CHO_THANH_TOAN',
+    ma_giao_dich_cong VARCHAR(150) NULL,
+    khoa_idempotency VARCHAR(120) NULL,
+    ghi_chu VARCHAR(500) NULL,
+    thoi_gian_thanh_toan DATETIME(3) NULL,
+    ngay_tao DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    ngay_cap_nhat DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_thanh_toan_ma (ma_thanh_toan),
+    UNIQUE KEY uk_thanh_toan_idempotency (khoa_idempotency),
+    UNIQUE KEY uk_thanh_toan_cong (phuong_thuc, ma_giao_dich_cong),
+    KEY idx_thanh_toan_dat_ban (dat_ban_id, ngay_tao),
+    KEY idx_thanh_toan_trang_thai (trang_thai, ngay_tao),
+    CONSTRAINT fk_thanh_toan_dat_ban FOREIGN KEY (dat_ban_id) REFERENCES dat_ban(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT ck_thanh_toan_so_tien CHECK (so_tien > 0),
+    CONSTRAINT ck_thanh_toan_phuong_thuc CHECK (phuong_thuc IN ('MO_PHONG','VNPAY','MOMO','CHUYEN_KHOAN','TIEN_MAT')),
+    CONSTRAINT ck_thanh_toan_trang_thai CHECK (trang_thai IN ('CHO_THANH_TOAN','DA_THANH_TOAN','THAT_BAI','DA_HUY','DA_HOAN_TIEN','HOAN_MOT_PHAN'))
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS hoan_tien (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    ma_hoan_tien VARCHAR(50) NOT NULL,
+    thanh_toan_id BIGINT UNSIGNED NOT NULL,
+    so_tien DECIMAL(15,2) NOT NULL,
+    ly_do VARCHAR(500) NOT NULL,
+    trang_thai VARCHAR(30) NOT NULL DEFAULT 'CHO_HOAN',
+    ma_giao_dich_cong VARCHAR(150) NULL,
+    khoa_idempotency VARCHAR(120) NULL,
+    nguoi_thuc_hien_id BIGINT UNSIGNED NULL COMMENT 'NULL nếu hệ thống tự hoàn',
+    thoi_gian_hoan DATETIME(3) NULL,
+    ngay_tao DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    ngay_cap_nhat DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_hoan_tien_ma (ma_hoan_tien),
+    UNIQUE KEY uk_hoan_tien_idempotency (khoa_idempotency),
+    UNIQUE KEY uk_hoan_tien_giao_dich_cong (ma_giao_dich_cong),
+    KEY idx_hoan_tien_thanh_toan (thanh_toan_id, ngay_tao),
+    KEY idx_hoan_tien_trang_thai (trang_thai, ngay_tao),
+    KEY idx_hoan_tien_nguoi_thuc_hien (nguoi_thuc_hien_id),
+    CONSTRAINT fk_hoan_tien_thanh_toan FOREIGN KEY (thanh_toan_id) REFERENCES thanh_toan(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_hoan_tien_nguoi_thuc_hien FOREIGN KEY (nguoi_thuc_hien_id) REFERENCES tai_khoan(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT ck_hoan_tien_so_tien CHECK (so_tien > 0),
+    CONSTRAINT ck_hoan_tien_trang_thai CHECK (trang_thai IN ('CHO_HOAN','DANG_XU_LY','DA_HOAN','THAT_BAI'))
+) ENGINE=InnoDB;
+
 -- ============================================================================
--- 5. THỰC ĐƠN
+-- 6. THỰC ĐƠN
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS danh_muc_mon (
@@ -367,6 +507,27 @@ CREATE TABLE IF NOT EXISTS mon_an (
     CONSTRAINT ck_mon_an_trang_thai CHECK (trang_thai IN ('HOAT_DONG', 'NGUNG_HOAT_DONG'))
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS chi_tiet_dat_mon (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    dat_ban_id BIGINT UNSIGNED NOT NULL,
+    mon_an_id BIGINT UNSIGNED NOT NULL,
+    ma_mon VARCHAR(30) NOT NULL COMMENT 'Snapshot mã món tại thời điểm đặt',
+    ten_mon VARCHAR(200) NOT NULL COMMENT 'Snapshot tên món tại thời điểm đặt',
+    don_gia DECIMAL(15,2) NOT NULL,
+    so_luong INT UNSIGNED NOT NULL,
+    thanh_tien DECIMAL(15,2) NOT NULL,
+    ghi_chu VARCHAR(500) NULL,
+    ngay_tao DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_ctdm_dat_ban_mon (dat_ban_id, mon_an_id),
+    KEY idx_ctdm_mon_an (mon_an_id),
+    CONSTRAINT fk_ctdm_dat_ban FOREIGN KEY (dat_ban_id) REFERENCES dat_ban(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_ctdm_mon_an FOREIGN KEY (mon_an_id) REFERENCES mon_an(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT ck_ctdm_don_gia CHECK (don_gia >= 0),
+    CONSTRAINT ck_ctdm_so_luong CHECK (so_luong >= 1),
+    CONSTRAINT ck_ctdm_thanh_tien CHECK (thanh_tien >= 0)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS hinh_anh_mon (
     id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     mon_an_id           BIGINT UNSIGNED NOT NULL,
@@ -379,36 +540,6 @@ CREATE TABLE IF NOT EXISTS hinh_anh_mon (
     PRIMARY KEY (id),
     KEY idx_hinh_anh_mon (mon_an_id, thu_tu),
     CONSTRAINT fk_hinh_anh_mon FOREIGN KEY (mon_an_id) REFERENCES mon_an(id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
-
--- ============================================================================
--- 6. KHUYẾN MÃI
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS khuyen_mai (
-    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    ma_khuyen_mai       VARCHAR(50) NOT NULL,
-    ten_khuyen_mai      VARCHAR(200) NOT NULL,
-    mo_ta               TEXT NULL,
-    loai_giam           VARCHAR(30) NOT NULL,
-    gia_tri             DECIMAL(15,2) NOT NULL,
-    gia_tri_don_toi_thieu DECIMAL(15,2) NULL,
-    giam_toi_da         DECIMAL(15,2) NULL,
-    ngay_bat_dau        DATETIME(3) NOT NULL,
-    ngay_ket_thuc       DATETIME(3) NOT NULL,
-    trang_thai          VARCHAR(30) NOT NULL DEFAULT 'HOAT_DONG',
-    ngay_tao            DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    ngay_cap_nhat       DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    ngay_xoa            DATETIME(3) NULL,
-
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_khuyen_mai_ma (ma_khuyen_mai),
-    KEY idx_khuyen_mai_thoi_gian (ngay_bat_dau, ngay_ket_thuc),
-    KEY idx_khuyen_mai_trang_thai (trang_thai),
-    CONSTRAINT ck_khuyen_mai_thoi_gian CHECK (ngay_ket_thuc > ngay_bat_dau),
-    CONSTRAINT ck_khuyen_mai_loai_giam CHECK (loai_giam IN ('PHAN_TRAM', 'SO_TIEN')),
-    CONSTRAINT ck_khuyen_mai_gia_tri CHECK ((loai_giam = 'PHAN_TRAM' AND gia_tri > 0 AND gia_tri <= 100) OR (loai_giam = 'SO_TIEN' AND gia_tri > 0)),
-    CONSTRAINT ck_khuyen_mai_trang_thai CHECK (trang_thai IN ('HOAT_DONG', 'NGUNG_HOAT_DONG'))
 ) ENGINE=InnoDB;
 
 -- ============================================================================
@@ -653,6 +784,11 @@ VALUES
     ('KHUYEN_MAI_XEM', 'Xem khuyến mãi', 'KHUYEN_MAI', NULL),
     ('KHUYEN_MAI_QUAN_LY', 'Quản lý khuyến mãi', 'KHUYEN_MAI', NULL),
 
+    ('THANH_TOAN_XEM', 'Xem thanh toán', 'THANH_TOAN', NULL),
+    ('THANH_TOAN_QUAN_LY', 'Quản lý thanh toán', 'THANH_TOAN', NULL),
+    ('HOAN_TIEN_THUC_HIEN', 'Thực hiện hoàn tiền', 'THANH_TOAN', NULL),
+    ('CAU_HINH_DAT_BAN_QUAN_LY', 'Quản lý cấu hình đặt bàn và thanh toán', 'HE_THONG', NULL),
+
     ('DANH_GIA_XEM', 'Xem đánh giá', 'DANH_GIA', NULL),
     ('DANH_GIA_QUAN_LY', 'Quản lý đánh giá', 'DANH_GIA', NULL),
 
@@ -684,7 +820,7 @@ JOIN quyen q ON q.ma_quyen IN (
     'KHU_VUC_XEM', 'BAN_AN_XEM',
     'KHACH_HANG_XEM', 'KHACH_HANG_SUA',
     'DANH_MUC_MON_XEM', 'MON_AN_XEM',
-    'DANH_GIA_XEM'
+    'DANH_GIA_XEM', 'THANH_TOAN_XEM'
 )
 WHERE vt.ma_vai_tro = 'NHAN_VIEN';
 
@@ -719,7 +855,12 @@ VALUES
     ('THOI_GIAN_HUY_TRUOC_PHUT', '60', 'SO', 'DAT_BAN', 'Khách chỉ được tự hủy trước giờ đặt tối thiểu số phút này', 1),
     ('SO_NGUOI_TOI_DA_MOI_DAT_BAN', '20', 'SO', 'DAT_BAN', 'Số người tối đa cho một yêu cầu đặt bàn online', 1),
     ('CHO_PHEP_KHACH_CHON_BAN', 'true', 'BOOLEAN', 'DAT_BAN', 'Cho phép khách tự chọn bàn cụ thể', 1),
-    ('KHOANG_CACH_SLOT_PHUT', '30', 'SO', 'DAT_BAN', 'Khoảng cách giữa các khung giờ đặt bàn', 1)
+    ('KHOANG_CACH_SLOT_PHUT', '30', 'SO', 'DAT_BAN', 'Khoảng cách giữa các khung giờ đặt bàn', 1),
+    ('CHO_PHEP_DAT_MON_TRUOC', 'true', 'BOOLEAN', 'DAT_BAN', 'Cho phép khách chọn món trước khi hoàn tất đặt bàn', 1),
+    ('YEU_CAU_THANH_TOAN_MON_TRUOC', 'true', 'BOOLEAN', 'THANH_TOAN', 'Yêu cầu thanh toán món đã chọn trước khi xác nhận giao dịch', 1),
+    ('TIEN_COC_GIU_BAN', '100000', 'SO', 'THANH_TOAN', 'Tiền cọc giữ bàn mặc định tính theo VNĐ', 1),
+    ('THOI_GIAN_THANH_TOAN_PHUT', '15', 'SO', 'THANH_TOAN', 'Số phút giữ phiên thanh toán trước khi hết hạn', 1),
+    ('TY_LE_HOAN_TIEN_HUY_DUNG_HAN', '100', 'SO', 'THANH_TOAN', 'Tỷ lệ phần trăm hoàn tiền khi khách hủy đúng thời hạn', 1)
 ON DUPLICATE KEY UPDATE
     gia_tri = VALUES(gia_tri),
     kieu_du_lieu = VALUES(kieu_du_lieu),
@@ -909,3 +1050,6 @@ SELECT COUNT(*) AS so_khu_vuc FROM khu_vuc;
 SELECT COUNT(*) AS so_ban FROM ban_an;
 SELECT COUNT(*) AS so_danh_muc FROM danh_muc_mon;
 SELECT COUNT(*) AS so_mon FROM mon_an;
+SELECT COUNT(*) AS so_chi_tiet_dat_mon FROM chi_tiet_dat_mon;
+SELECT COUNT(*) AS so_thanh_toan FROM thanh_toan;
+SELECT COUNT(*) AS so_hoan_tien FROM hoan_tien;
