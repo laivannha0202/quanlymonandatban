@@ -3697,3 +3697,45 @@ Mobile thế nào
 ```
 
 Đây là tiêu chuẩn để frontend không trở thành một bộ giao diện CRUD rời rạc mà phản ánh đúng toàn bộ nghiệp vụ nhà hàng.
+
+<!-- PHASE11_FRONTEND_ADDENDUM -->
+# Bổ sung Frontend Phase 11
+
+## Đặt bàn public
+
+- Email tùy chọn: rỗng được bỏ khỏi payload; email có giá trị phải qua validation trước khi rời bước thông tin.
+- Xác nhận cuối lấy toàn bộ giá trị Form bằng `getFieldsValue(true)` để không phụ thuộc việc field của bước đầu đã unmount.
+
+## Dashboard
+
+- KPI theo ngày đang chọn.
+- Danh sách `Lịch phục vụ sắp tới` lấy booking tương lai từ hiện tại và có thể khác ngày đang chọn.
+
+## Bàn ăn
+
+Màn Bàn ăn tách rõ:
+
+- `Trạng thái hiện tại`: trạng thái vật lý;
+- `Lịch gần nhất`: booking hiệu lực hiện tại/tương lai.
+
+Không đổi bàn tương lai sang `DANG_SU_DUNG`.
+
+## Thanh toán & hoàn tiền
+
+- Payment `CHO_THANH_TOAN` hiển thị phương thức là `Chưa ghi nhận`.
+- KPI dùng `tongHop` backend trên toàn bộ bộ lọc.
+- Có cột/alert cho hàng đợi hoàn tiền.
+- Refund pending hiển thị hành động `Xử lý hoàn`; nút xác nhận thực tế vẫn bị khóa bởi `HOAN_TIEN_THUC_HIEN`.
+
+## Hủy booking quản trị
+
+Modal Hủy áp dụng theo vai trò:
+
+- Nhân viên chỉ có lựa chọn **Khách yêu cầu hủy**;
+- Admin có thêm lựa chọn **Nhà hàng chủ động hủy**.
+
+UI giải thích rằng Nhân viên chỉ tạo yêu cầu hoàn, không trực tiếp xuất tiền; lựa chọn nhà hàng chủ động hủy chỉ dành cho Admin.
+
+## Menu và route
+
+Sidebar dùng `coTatCaQuyen` giống route guard. Màn Bàn ăn yêu cầu `BAN_AN_XEM + KHU_VUC_XEM`; màn Món ăn yêu cầu `MON_AN_XEM + DANH_MUC_MON_XEM`.

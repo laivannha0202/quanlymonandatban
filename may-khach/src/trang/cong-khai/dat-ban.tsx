@@ -433,10 +433,31 @@ export function DatBanPage() {
 
   async function taoDatBan() {
     try {
-      const v = await form.validateFields();
-      if (!v.ngay || !v.gioBatDau || !v.soNguoi) return;
+      // Ở bước 3, Form của bước 0 đã unmount. AntD validateFields()
+      // không còn field entity để validate và có thể trả về object rỗng,
+      // khiến nút "Xác nhận đặt bàn" return im lặng.
+      // Lấy toàn bộ store đã preserve thay vì validate field đã unmount.
+      const v = form.getFieldsValue(true);
+
+      if (
+        !v.hoTen?.trim() ||
+        !v.soDienThoai?.trim() ||
+        !v.ngay ||
+        !v.gioBatDau ||
+        !v.soNguoi
+      ) {
+        const thongBao =
+          'Thông tin đặt bàn đang thiếu. Vui lòng kiểm tra lại bước Thông tin.';
+        setLoi(thongBao);
+        message.error(thongBao);
+        setBuoc(0);
+        return;
+      }
+
       if (!baoGia) {
-        setLoi('Vui lòng tính lại tổng thanh toán trước.');
+        const thongBao = 'Vui lòng tính lại tổng thanh toán trước.';
+        setLoi(thongBao);
+        message.error(thongBao);
         return;
       }
 
@@ -446,7 +467,7 @@ export function DatBanPage() {
       const payload: TaoDatBanPayload = {
         hoTen: v.hoTen,
         soDienThoai: v.soDienThoai,
-        email: v.email,
+        email: v.email?.trim() || undefined,
         ngay: v.ngay,
         gioBatDau: v.gioBatDau,
         soNguoi: v.soNguoi,
@@ -464,11 +485,14 @@ export function DatBanPage() {
         setBuoc(4);
       }
     } catch (error) {
-      setLoi(
+      const thongBao =
         error instanceof LoiApi
           ? error.message
-          : 'Không thể tạo đặt bàn.',
-      );
+          : 'Không thể tạo đặt bàn.';
+      setLoi(thongBao);
+      // Alert lỗi nằm ở đầu trang; khi người dùng đang ở cuối bước
+      // thanh toán sẽ khó thấy. Toast giúp lỗi API hiện ngay tại chỗ.
+      message.error(thongBao);
     } finally {
       setDangTaoDatBan(false);
     }
@@ -712,8 +736,21 @@ export function DatBanPage() {
                         </Form.Item>
                       </Col>
                       <Col xs={24}>
-                        <Form.Item name="email" label="Email">
-                          <Input size="large" type="email" />
+                        <Form.Item
+                          name="email"
+                          label="Email"
+                          rules={[
+                            {
+                              type: 'email',
+                              message: 'Email không đúng định dạng.',
+                            },
+                          ]}
+                        >
+                          <Input
+                            size="large"
+                            type="email"
+                            placeholder="Ví dụ: ban@example.com"
+                          />
                         </Form.Item>
                       </Col>
                     </Row>

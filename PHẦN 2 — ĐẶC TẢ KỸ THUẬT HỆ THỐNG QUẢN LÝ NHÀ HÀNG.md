@@ -2491,3 +2491,32 @@ Prisma / MySQL
 ```
 
 Đây sẽ là nền móng để triển khai source code thực tế mà không phải vừa code vừa tự nghĩ lại nghiệp vụ.
+
+<!-- PHASE11_TECHNICAL_ADDENDUM -->
+# Bổ sung kỹ thuật Phase 11 — Business consistency
+
+## State và ledger
+
+- `dat_ban.trang_thai` tiếp tục dùng state machine booking hiện có.
+- `ban_an.trang_thai` chỉ thể hiện trạng thái vật lý hiện tại.
+- Booking tương lai của bàn được truy vấn từ `chi_tiet_dat_ban` + `dat_ban` theo các trạng thái hiệu lực.
+- Booking có `tong_thanh_toan_truoc > 0` luôn có `thanh_toan` ledger.
+- Hủy booking đã thu tiền tạo `hoan_tien.CHO_HOAN`; xác nhận hoàn tiền mới cập nhật payment thành `HOAN_MOT_PHAN` / `DA_HOAN_TIEN`.
+
+## Phân quyền nghiệp vụ
+
+- `DAT_BAN_HUY`: cho phép hủy booking và tạo yêu cầu hoàn theo chính sách.
+- `THANH_TOAN_XEM`: chỉ đọc payment/refund.
+- `THANH_TOAN_QUAN_LY`: xác nhận thu tiền thủ công.
+- `HOAN_TIEN_THUC_HIEN`: xác nhận hoàn tiền đã thực hiện.
+- Các route frontend yêu cầu nhiều dependency dùng logic đủ tất cả quyền, không dùng OR.
+
+## Tài chính
+
+Summary của danh sách thanh toán được aggregate trên `where` của toàn bộ bộ lọc. `tongDaThu` lấy payment ở các trạng thái đã thu; `tongDaHoan` chỉ lấy refund `DA_HOAN`; `thucThu = tongDaThu - tongDaHoan`.
+
+Dashboard và Báo cáo dùng timezone Việt Nam khi phân loại payment/refund theo ngày.
+
+## Timeout
+
+Cleanup payment quá hạn chỉ được phép tự hủy booking nguồn `WEBSITE`. Booking do nhân viên tạo không bị áp timeout checkout online.

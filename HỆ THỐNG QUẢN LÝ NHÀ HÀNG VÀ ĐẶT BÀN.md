@@ -2678,3 +2678,71 @@ Với cấu trúc trên, frontend khách hàng và frontend Admin có thể dùn
 Backend dùng chung một API, sau đó chia endpoint public, khách hàng và quản trị.
 
 Đây là phương án phù hợp để phát triển thành một hệ thống nhà hàng thực tế chứ không chỉ một website CRUD đơn giản.
+
+<!-- PHASE11_REPORT_ADDENDUM -->
+# PHỤ LỤC — CHUẨN HÓA NGHIỆP VỤ QUẢN TRỊ VÀ VẬN HÀNH (PHASE 11)
+
+## 1. Mục tiêu
+
+Phase 11 được thực hiện sau khi luồng đặt bàn, đặt món trước, khuyến mãi, thanh toán và hoàn tiền đã hoàn thành. Mục tiêu là loại bỏ các trường hợp giao diện, quyền truy cập và backend cùng tồn tại nhưng diễn giải nghiệp vụ khác nhau.
+
+Các nguyên tắc chốt:
+
+- trạng thái vật lý của bàn tách khỏi lịch đặt tương lai;
+- trạng thái booking tách khỏi trạng thái payment;
+- hủy booking tách khỏi thực hiện hoàn tiền;
+- số liệu tài chính lấy từ ledger thực tế thay vì suy diễn từ booking;
+- quyền Nhân viên tập trung vào vận hành, quyền xuất tiền và cấu hình thuộc nhóm quản trị;
+- mọi summary tài chính phải áp dụng trên toàn bộ bộ lọc, không phụ thuộc pagination.
+
+## 2. Trạng thái bàn và lịch đặt
+
+`TRONG` nghĩa là bàn đang trống ở thời điểm hiện tại. Nó không có nghĩa là bàn chưa được đặt ở một thời điểm tương lai. Khi một booking tương lai giữ bàn, hệ thống vẫn giữ trạng thái vật lý `TRONG` nhưng hiển thị thêm lịch booking gần nhất.
+
+Khi check-in, workflow chuyển bàn thành `DANG_SU_DUNG`; khi hoàn thành lượt phục vụ, bàn trở về `TRONG`. Việc chống đặt trùng được backend thực hiện theo giao nhau của `gio_bat_dau` / `gio_ket_thuc`, không phụ thuộc nhãn trạng thái vật lý.
+
+## 3. Booking và payment là hai state machine liên quan nhưng độc lập
+
+Booking do nhân viên tạo trực tiếp có thể được xác nhận ngay để phục vụ vận hành. Tuy nhiên nếu `tong_thanh_toan_truoc > 0`, hệ thống vẫn tạo payment `CHO_THANH_TOAN`. Nhờ đó không còn trường hợp booking có snapshot tiền cọc nhưng không có chứng từ thanh toán tương ứng.
+
+Timeout thanh toán chỉ áp dụng nguồn `WEBSITE`. Booking điện thoại, Facebook, trực tiếp hoặc nguồn nội bộ không bị tự hủy chỉ vì chưa thu tiền trong khoảng timeout online.
+
+## 4. Hủy và hoàn tiền
+
+Nguồn hủy quyết định chính sách:
+
+- khách yêu cầu hủy: Nhân viên hoặc Admin được xử lý, dùng thời hạn và tỷ lệ hoàn trong cấu hình;
+- nhà hàng chủ động hủy: chỉ Admin được ghi nhận và hoàn 100% số tiền đủ điều kiện.
+
+Nhân viên có quyền `DAT_BAN_HUY` có thể hủy booking đã thanh toán. Hành động này chỉ tạo yêu cầu hoàn `CHO_HOAN`. Việc chuyển tiền thật hoặc xác nhận đã hoàn cần `HOAN_TIEN_THUC_HIEN`.
+
+Nhờ đó RBAC không còn tình trạng Nhân viên nhìn thấy nút Hủy nhưng backend trả 403 chỉ vì booking đã thu tiền.
+
+## 5. Dashboard, Thanh toán và Báo cáo
+
+Dashboard tách hai khái niệm:
+
+- KPI của ngày đang chọn;
+- danh sách booking sắp tới tính từ hiện tại, có thể thuộc ngày sau.
+
+Màn Thanh toán trả `tongHop` trên toàn bộ bộ lọc gồm tổng đã thu, đã hoàn, thực thu, chờ thanh toán và chờ hoàn tiền. Báo cáo dùng `thanh_toan` đã thu và `hoan_tien.DA_HOAN` làm nguồn tài chính thực tế.
+
+Công thức:
+
+`thực thu = tổng đã thu - tổng đã hoàn thành công`
+
+## 6. RBAC
+
+Hệ thống giữ 35 quyền. `QUAN_TRI_VIEN` nhận toàn bộ quyền. `NHAN_VIEN` có nhóm quyền vận hành booking và quyền xem các dữ liệu cần thiết để phục vụ khách nhưng không được quản lý nhân sự, cấu hình, báo cáo quản trị, dữ liệu menu/khu vực/bàn ở cấp quản lý, xác nhận thu tiền thủ công hoặc thực hiện hoàn tiền.
+
+Frontend menu, route guard và backend permission decorator được đối chiếu theo cùng contract.
+
+## 7. Kết quả kiểm chứng
+
+Phase 11 được kiểm tra theo ba lớp:
+
+- static business-contract audit giữa DTO, service, controller, frontend và SQL;
+- runtime RBAC với tài khoản Admin và Nhân viên thật;
+- runtime E2E booking → payment → cancel → refund → Dashboard/Report/Table và cleanup dữ liệu test.
+
+Mục tiêu của các gate là chứng minh các module không chỉ build được mà còn vận hành cùng một nghiệp vụ từ database đến giao diện.

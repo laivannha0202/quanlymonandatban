@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined, LinkOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
-import { App, Button, Card, Collapse, Form, Input, InputNumber, Modal, Select, Space, Switch, Table, Tabs, Tag } from 'antd';
+import { Alert, App, Button, Card, Collapse, Form, Input, InputNumber, Modal, Select, Space, Switch, Table, Tabs, Tag, Typography } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import {
@@ -9,6 +9,7 @@ import {
   type LienKetBanQuanTri,
 } from '@/dich-vu/quan-tri.api';
 import { LoiApi } from '@/dich-vu/http';
+import { dinhDangNgayGio } from '@/cau-hinh/ngay-gio';
 import { useXacThuc } from '@/ngu-canh/xac-thuc.context';
 import { CanhBaoLoi } from '@/thanh-phan/canh-bao-loi';
 import { TieuDeTrang } from '@/thanh-phan/tieu-de-trang';
@@ -195,11 +196,18 @@ export function QuanTriBanAn() {
       </Space>
     </Card>
     <CanhBaoLoi loi={banQuery.error ?? khuVucQuery.error} macDinh="Không tải được bàn ăn." />
+    <Alert
+      className="mb-16"
+      type="info"
+      showIcon
+      message="Trạng thái bàn và lịch đặt là hai khái niệm khác nhau"
+      description="Trống nghĩa là bàn đang trống ở thời điểm hiện tại. Cột Lịch gần nhất cho biết bàn đã được giữ cho một lượt đặt hiện tại hoặc tương lai; hệ thống vẫn chặn đặt trùng theo khung giờ."
+    />
     <Card className="admin-table-card"><Table
       rowKey="id"
       loading={banQuery.isPending || banQuery.isFetching}
       dataSource={danhSachBanHienThi}
-      scroll={{ x: 1050 }}
+      scroll={{ x: 1320 }}
       pagination={{ pageSize: 20, showSizeChanger: false }}
       columns={[
         { title: 'Mã bàn', dataIndex: 'maBan', fixed: 'left' },
@@ -207,7 +215,55 @@ export function QuanTriBanAn() {
         { title: 'Khu vực', dataIndex: 'khuVucId', render: (id: string) => tenKhuVuc.get(id) || id },
         { title: 'Sức chứa chuẩn', dataIndex: 'sucChua', width: 130 },
         { title: 'Sức chứa tối đa', dataIndex: 'sucChuaToiDa', width: 130 },
-        { title: 'Trạng thái', dataIndex: 'trangThai', render: (v: string) => <TrangThai value={v} /> },
+        {
+          title: 'Trạng thái hiện tại',
+          dataIndex: 'trangThai',
+          width: 155,
+          render: (v: string) => <TrangThai value={v} />,
+        },
+        {
+          title: 'Lịch gần nhất',
+          width: 275,
+          render: (_: unknown, r: BanAnQuanTri) => {
+            const lich = r.lichDatGanNhat;
+            if (!lich) {
+              return (
+                <Typography.Text type="secondary">
+                  Chưa có lịch hiệu lực
+                </Typography.Text>
+              );
+            }
+
+            return (
+              <div>
+                <Space size={6} wrap>
+                  <Typography.Text strong>
+                    {lich.maDatBan}
+                  </Typography.Text>
+                  <Tag
+                    color={
+                      lich.trangThai === 'DA_CHECK_IN'
+                        ? 'green'
+                        : 'blue'
+                    }
+                  >
+                    {lich.trangThai === 'DA_CHECK_IN'
+                      ? 'Đang phục vụ'
+                      : 'Đã có lịch'}
+                  </Tag>
+                </Space>
+                <div>
+                  {dinhDangNgayGio(lich.gioBatDau)}
+                  {' · '}
+                  {lich.soNguoi} khách
+                </div>
+                <Typography.Text type="secondary">
+                  {lich.hoTen}
+                </Typography.Text>
+              </div>
+            );
+          },
+        },
         { title: 'Ghi chú', dataIndex: 'ghiChu', ellipsis: true },
         { title: 'Thao tác', fixed: 'right', width: 150, render: (_: unknown, r: BanAnQuanTri) => coQuanLy ? <Space>
           <Button size="small" aria-label="Sửa bàn" icon={<EditOutlined />} onClick={() => moSuaBan(r)} />

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { MonDatTruocDto } from './tinh-tien-dat-ban.dto';
 import { ArrayMaxSize, IsArray, IsEmail, IsInt, IsOptional, IsString, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
 
@@ -13,6 +13,11 @@ export class TaoDatBanDto {
   soDienThoai!: string;
 
   @ApiPropertyOptional({ example: 'a@example.com' })
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    const email = value.trim();
+    return email || undefined;
+  })
   @IsOptional() @IsEmail() @MaxLength(255)
   email?: string;
 

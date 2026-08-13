@@ -276,9 +276,11 @@ export class DatBanService {
         trangThai: string;
       } | null = null;
 
-      // Booking online tạo payment intent ngay trong transaction.
-      // Admin tạo booking trực tiếp sẽ ghi nhận tiền ở màn quản trị Phase 10G.
-      if (!input.laQuanTri && baoGia.tongThanhToanTruoc > 0) {
+      // Mọi booking có số tiền phải thu trước đều phải có payment ledger.
+      // Booking website sẽ thanh toán qua luồng khách; booking do nhân viên
+      // tạo sẽ nằm CHO_THANH_TOAN để nhân viên có quyền tài chính ghi nhận
+      // phương thức thực tế sau đó.
+      if (baoGia.tongThanhToanTruoc > 0) {
         const maThanhToan =
           `TT${input.ngay.replaceAll('-', '')}-` +
           id.toString().padStart(6, '0');
@@ -291,7 +293,9 @@ export class DatBanService {
             phuong_thuc: 'MO_PHONG',
             trang_thai: 'CHO_THANH_TOAN',
             ghi_chu:
-              `Thanh toán trước cho đặt bàn ${maDatBan}.`,
+              input.laQuanTri
+                ? `Khoản cần thu trước cho đặt bàn ${maDatBan} do nhân viên tạo.`
+                : `Thanh toán trước cho đặt bàn ${maDatBan}.`,
           },
           select: {
             id: true,

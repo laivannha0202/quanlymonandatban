@@ -57,6 +57,20 @@ export interface ThanhToanQuanTri {
   hoanTien?: HoanTienQuanTri[];
 }
 
+export interface TongHopThanhToanQuanTri {
+  tongGiaoDich: number;
+  tongDaThu: number;
+  tongDaHoan: number;
+  thucThu: number;
+  choThanhToan: number;
+  choHoanTien: number;
+}
+
+export type DanhSachThanhToanQuanTri =
+  DanhSachPhanTrang<ThanhToanQuanTri> & {
+    tongHop: TongHopThanhToanQuanTri;
+  };
+
 export interface BoLocThanhToanQuanTri {
   trang?: number;
   kichThuoc?: number;
@@ -78,7 +92,7 @@ export interface XacNhanHoanTienPayload {
 
 export const thanhToanQuanTriApi = {
   danhSach: (p: BoLocThanhToanQuanTri = {}) =>
-    goiApi<DanhSachPhanTrang<ThanhToanQuanTri>>(
+    goiApi<DanhSachThanhToanQuanTri>(
       `/quan-tri/thanh-toan${taoQuery({
         trang: p.trang ?? 1,
         kichThuoc: p.kichThuoc ?? 20,

@@ -31,7 +31,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { dinhDangTien } from '@/cau-hinh/dinh-dang';
 import {
   dinhDangNgay,
@@ -104,6 +104,15 @@ const NHAN_PHUONG_THUC: Record<PhuongThucThanhToan, string> = {
 
 type FormThanhToan = XacNhanThanhToanThuCongPayload;
 type FormHoanTien = XacNhanHoanTienPayload;
+
+function hienThiPhuongThuc(
+  phuongThuc: PhuongThucThanhToan,
+  trangThai: TrangThaiThanhToan,
+) {
+  return trangThai === 'CHO_THANH_TOAN'
+    ? 'Chưa ghi nhận'
+    : NHAN_PHUONG_THUC[phuongThuc];
+}
 
 function TheHoanTien({
   item,
@@ -253,6 +262,9 @@ export function QuanTriThanhToan() {
         queryClient.invalidateQueries({
           queryKey: ['quan-tri', 'dashboard'],
         }),
+        queryClient.invalidateQueries({
+          queryKey: ['quan-tri', 'bao-cao'],
+        }),
       ]);
       await chiTietQuery.refetch();
     },
@@ -278,9 +290,20 @@ export function QuanTriThanhToan() {
       setRefundCanXacNhan(null);
       formHoanTien.resetFields();
       setChiTietId(data.id);
-      await queryClient.invalidateQueries({
-        queryKey: ['quan-tri', 'thanh-toan'],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['quan-tri', 'thanh-toan'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['quan-tri', 'dat-ban'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['quan-tri', 'dashboard'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['quan-tri', 'bao-cao'],
+        }),
+      ]);
       await chiTietQuery.refetch();
     },
     onError: (error) =>
@@ -293,29 +316,14 @@ export function QuanTriThanhToan() {
 
   const ds = query.data?.danhSach ?? [];
   const tong = query.data?.phanTrang.tong ?? 0;
-
-  const tongDaThu = useMemo(
-    () =>
-      ds
-        .filter((item) =>
-          [
-            'DA_THANH_TOAN',
-            'HOAN_MOT_PHAN',
-            'DA_HOAN_TIEN',
-          ].includes(item.trangThai),
-        )
-        .reduce((sum, item) => sum + item.soTien, 0),
-    [ds],
-  );
-
-  const tongDaHoan = useMemo(
-    () =>
-      ds.reduce(
-        (sum, item) => sum + (item.tongHoan ?? 0),
-        0,
-      ),
-    [ds],
-  );
+  const tongHop = query.data?.tongHop ?? {
+    tongGiaoDich: 0,
+    tongDaThu: 0,
+    tongDaHoan: 0,
+    thucThu: 0,
+    choThanhToan: 0,
+    choHoanTien: 0,
+  };
 
   const chiTiet = chiTietQuery.data;
 
@@ -340,27 +348,41 @@ export function QuanTriThanhToan() {
       />
 
       <Row gutter={[16, 16]} className="mb-16">
-        <Col xs={24} sm={8}>
-          <Card>
-            <Statistic title="Giao dịch theo bộ lọc" value={tong} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={12} xl={6}>
           <Card>
             <Statistic
-              title="Đã thu trên trang hiện tại"
-              value={tongDaThu}
+              title="Giao dịch theo bộ lọc"
+              value={tongHop.tongGiaoDich}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <Card>
+            <Statistic
+              title="Đã thu theo bộ lọc"
+              value={tongHop.tongDaThu}
               formatter={(value) =>
                 dinhDangTien(Number(value))
               }
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={12} xl={6}>
           <Card>
             <Statistic
-              title="Đã hoàn trên trang hiện tại"
-              value={tongDaHoan}
+              title="Đã hoàn theo bộ lọc"
+              value={tongHop.tongDaHoan}
+              formatter={(value) =>
+                dinhDangTien(Number(value))
+              }
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <Card>
+            <Statistic
+              title="Thực thu theo bộ lọc"
+              value={tongHop.thucThu}
               formatter={(value) =>
                 dinhDangTien(Number(value))
               }
@@ -368,6 +390,28 @@ export function QuanTriThanhToan() {
           </Card>
         </Col>
       </Row>
+
+      {tongHop.choThanhToan > 0 ||
+      tongHop.choHoanTien > 0 ? (
+        <Alert
+          className="mb-16"
+          type={
+            tongHop.choHoanTien > 0
+              ? 'warning'
+              : 'info'
+          }
+          showIcon
+          message="Có giao dịch cần xử lý"
+          description={
+            <>
+              {tongHop.choThanhToan} giao dịch chờ thanh toán ·{' '}
+              {tongHop.choHoanTien} yêu cầu hoàn tiền chờ xử lý.
+              Yêu cầu hoàn tiền chỉ được đánh dấu hoàn tất bởi tài
+              khoản có quyền thực hiện hoàn tiền.
+            </>
+          }
+        />
+      ) : null}
 
       <Card className="admin-table-card">
         <div className="admin-finance-filters">
@@ -457,8 +501,10 @@ export function QuanTriThanhToan() {
               title: 'Phương thức',
               dataIndex: 'phuongThuc',
               width: 135,
-              render: (value: PhuongThucThanhToan) =>
-                NHAN_PHUONG_THUC[value],
+              render: (
+                value: PhuongThucThanhToan,
+                row: ThanhToanQuanTri,
+              ) => hienThiPhuongThuc(value, row.trangThai),
             },
             {
               title: 'Trạng thái',
@@ -479,6 +525,25 @@ export function QuanTriThanhToan() {
                 dinhDangTien(value ?? 0),
             },
             {
+              title: 'Hoàn tiền',
+              width: 150,
+              render: (
+                _: unknown,
+                row: ThanhToanQuanTri,
+              ) =>
+                row.coHoanTienDangCho ? (
+                  <Tag color="gold">Chờ xử lý</Tag>
+                ) : (row.tongHoan ?? 0) > 0 ? (
+                  <Tag color="cyan">
+                    Đã hoàn {dinhDangTien(row.tongHoan ?? 0)}
+                  </Tag>
+                ) : (
+                  <Typography.Text type="secondary">
+                    —
+                  </Typography.Text>
+                ),
+            },
+            {
               title: 'Ngày tạo',
               dataIndex: 'ngayTao',
               width: 170,
@@ -492,10 +557,22 @@ export function QuanTriThanhToan() {
               render: (_: unknown, row: ThanhToanQuanTri) => (
                 <Button
                   size="small"
-                  icon={<EyeOutlined />}
+                  type={
+                    row.coHoanTienDangCho &&
+                    coQuyen('HOAN_TIEN_THUC_HIEN')
+                      ? 'primary'
+                      : 'default'
+                  }
+                  icon={
+                    row.coHoanTienDangCho
+                      ? <UndoOutlined />
+                      : <EyeOutlined />
+                  }
                   onClick={() => setChiTietId(row.id)}
                 >
-                  Chi tiết
+                  {row.coHoanTienDangCho
+                    ? 'Xử lý hoàn'
+                    : 'Chi tiết'}
                 </Button>
               ),
             },
@@ -557,8 +634,10 @@ export function QuanTriThanhToan() {
                 {
                   key: 'pt',
                   label: 'Phương thức',
-                  children:
-                    NHAN_PHUONG_THUC[chiTiet.phuongThuc],
+                  children: hienThiPhuongThuc(
+                    chiTiet.phuongThuc,
+                    chiTiet.trangThai,
+                  ),
                 },
                 {
                   key: 'giaoDich',

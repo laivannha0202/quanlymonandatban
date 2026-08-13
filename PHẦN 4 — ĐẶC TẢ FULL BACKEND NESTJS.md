@@ -3258,3 +3258,39 @@ tìm bàn
 ```
 
 Đây mới là phần biến project từ một bài CRUD thành một hệ thống quản lý nhà hàng đúng nghĩa.
+
+<!-- PHASE11_BACKEND_ADDENDUM -->
+# Bổ sung Backend Phase 11
+
+## Dashboard
+
+`DashboardService` giữ query KPI booking theo `ngayChon`, nhưng query booking sắp tới sử dụng mốc thời gian hiện tại và chỉ lấy `CHO_XAC_NHAN` / `DA_XAC_NHAN`. `DA_CHECK_IN` là phục vụ hiện tại, không phải lịch tương lai.
+
+## BanAnService
+
+Danh sách quản trị enrich mỗi bàn bằng `lich_dat_gan_nhat`, query bulk trên toàn bộ ID bàn của page để tránh N+1. Booking hiệu lực gồm `CHO_XAC_NHAN`, `DA_XAC_NHAN`, `DA_CHECK_IN` với `gio_ket_thuc` còn sau thời điểm hiện tại.
+
+## DatBanService
+
+Mọi booking có `tongThanhToanTruoc > 0` tạo `thanh_toan.CHO_THANH_TOAN` trong cùng transaction, không phân biệt booking public hay nội bộ.
+
+## DatBanWorkflowService
+
+`huyQuanTri` nhận nguồn hủy:
+
+- `KHACH_YEU_CAU`: tính tỷ lệ từ cấu hình cutoff/refund; Nhân viên và Admin đều có thể xử lý nếu có `DAT_BAN_HUY`;
+- `NHA_HANG_CHU_DONG`: chỉ `QUAN_TRI_VIEN`, tỷ lệ 100%; backend từ chối Nhân viên bằng `403`.
+
+Quyền hoàn tiền không còn là điều kiện để hủy booking; quyền xác nhận hoàn vẫn tách riêng.
+
+## ThanhToanService
+
+`hoanTienDatBanTrongTransaction` tạo ledger `CHO_HOAN` và không tự hoàn `MO_PHONG`. Endpoint xác nhận refund do `HOAN_TIEN_THUC_HIEN` bảo vệ mới chuyển refund `DA_HOAN` và tính lại trạng thái payment.
+
+Danh sách quản trị trả `tongHop` aggregate theo toàn bộ filter.
+
+`huyDatBanQuaHanThanhToan` chỉ xử lý payment pending của booking `nguon_dat = WEBSITE`.
+
+## RBAC
+
+Backend controller tiếp tục là lớp enforcement cuối cùng. Frontend guard chỉ hỗ trợ UX, không thay thế `JwtGuard + QuyenGuard + @CanQuyen`.

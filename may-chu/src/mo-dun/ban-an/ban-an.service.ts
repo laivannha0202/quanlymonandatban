@@ -36,8 +36,74 @@ export class BanAnService {
       }),
     ]);
 
+    const hienTai = hienTaiWallClockVietNam();
+    const banIds = danhSach.map((ban) => ban.id);
+
+    const lichDat =
+      banIds.length > 0
+        ? await this.prisma.chi_tiet_dat_ban.findMany({
+            where: {
+              ban_an_id: {
+                in: banIds,
+              },
+              dat_ban: {
+                trang_thai: {
+                  in: [
+                    'CHO_XAC_NHAN',
+                    'DA_XAC_NHAN',
+                    'DA_CHECK_IN',
+                  ],
+                },
+                gio_ket_thuc: {
+                  gt: hienTai,
+                },
+              },
+            },
+            orderBy: [
+              {
+                dat_ban: {
+                  gio_bat_dau: 'asc',
+                },
+              },
+              {
+                dat_ban_id: 'asc',
+              },
+            ],
+            select: {
+              ban_an_id: true,
+              dat_ban: {
+                select: {
+                  id: true,
+                  ma_dat_ban: true,
+                  ho_ten: true,
+                  so_nguoi: true,
+                  gio_bat_dau: true,
+                  gio_ket_thuc: true,
+                  trang_thai: true,
+                },
+              },
+            },
+          })
+        : [];
+
+    const lichGanNhatTheoBan = new Map<
+      string,
+      (typeof lichDat)[number]['dat_ban']
+    >();
+
+    for (const item of lichDat) {
+      const key = item.ban_an_id.toString();
+      if (!lichGanNhatTheoBan.has(key)) {
+        lichGanNhatTheoBan.set(key, item.dat_ban);
+      }
+    }
+
     return {
-      danhSach,
+      danhSach: danhSach.map((ban) => ({
+        ...ban,
+        lich_dat_gan_nhat:
+          lichGanNhatTheoBan.get(ban.id.toString()) ?? null,
+      })),
       phanTrang: {
         trang: dto.trang,
         kichThuoc: dto.kichThuoc,

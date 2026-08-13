@@ -99,19 +99,73 @@ export class DatBanWorkflowService {
     return this.chuyenTrangThai(id, 'DA_HOAN_THANH', 'HOAN_THANH', nguoiDung, undefined, maYeuCau);
   }
 
-  async huyQuanTri(id: string, dto: HuyDatBanDto, nguoiDung: NguoiDungXacThuc, maYeuCau?: string | null) {
-    const coQuyenHoanTien =
-      await this.coQuyenHoanTien(nguoiDung.vaiTroId);
+  async huyQuanTri(
+    id: string,
+    dto: HuyDatBanDto,
+    nguoiDung: NguoiDungXacThuc,
+    maYeuCau?: string | null,
+  ) {
+    const datBanId = bigintTuChuoi(id, 'ID đặt bàn');
+    const datBan = await this.repository.layChiTietTheoId(datBanId);
+
+    if (!datBan) {
+      throw new LoiNghiepVuException(
+        'DAT_BAN_001',
+        'Đặt bàn không tồn tại.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const nguonHuy = dto.nguonHuy ?? 'KHACH_YEU_CAU';
+
+    if (
+      nguonHuy === 'NHA_HANG_CHU_DONG' &&
+      nguoiDung.maVaiTro !== 'QUAN_TRI_VIEN'
+    ) {
+      throw new LoiNghiepVuException(
+        'DAT_BAN_025',
+        'Chỉ quản trị viên được ghi nhận trường hợp nhà hàng chủ động hủy.',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    let tyLeHoanTien = 100;
+
+    if (nguonHuy === 'KHACH_YEU_CAU') {
+      const [truocPhut, tyLeDungHan] = await Promise.all([
+        this.cauHinh.laySo('THOI_GIAN_HUY_TRUOC_PHUT'),
+        this.cauHinh.laySo('TY_LE_HOAN_TIEN_HUY_DUNG_HAN'),
+      ]);
+      const gioBatDau = new Date(
+        `${datBan.gio_bat_dau.replace(' ', 'T')}+07:00`,
+      ).getTime();
+      const conLaiPhut = (gioBatDau - Date.now()) / 60_000;
+
+      tyLeHoanTien =
+        conLaiPhut >= truocPhut
+          ? tyLeDungHan
+          : 0;
+    }
+
+    const nhanNguon =
+      nguonHuy === 'NHA_HANG_CHU_DONG'
+        ? 'Nhà hàng chủ động hủy'
+        : 'Khách yêu cầu hủy qua nhân viên';
+    const lyDo = dto.lyDo?.trim();
+    const ghiChu = lyDo
+      ? `${nhanNguon}: ${lyDo}`
+      : nhanNguon;
 
     return this.chuyenTrangThai(
       id,
       'DA_HUY',
-      'HUY',
+      nguonHuy === 'NHA_HANG_CHU_DONG'
+        ? 'NHA_HANG_HUY'
+        : 'NHAN_VIEN_HUY_THEO_YEU_CAU_KHACH',
       nguoiDung,
-      dto.lyDo,
+      ghiChu,
       maYeuCau,
-      100,
-      coQuyenHoanTien,
+      tyLeHoanTien,
     );
   }
 
@@ -153,7 +207,6 @@ export class DatBanWorkflowService {
       BigInt(nguoiDung.taiKhoanId),
       dto.lyDo,
       tyLeHoanTien,
-      true,
     );
     await this.thongBao.taoChoDatBan(
       datBanId,
@@ -209,7 +262,6 @@ export class DatBanWorkflowService {
     ghiChu?: string,
     maYeuCau?: string | null,
     tyLeHoanTien?: number,
-    choPhepHoanTien = false,
   ) {
     const datBanId = bigintTuChuoi(id, 'ID đặt bàn');
     const cu = await this.repository.layChiTietDayDu(datBanId);
@@ -221,7 +273,6 @@ export class DatBanWorkflowService {
       BigInt(nguoiDung.taiKhoanId),
       ghiChu,
       tyLeHoanTien,
-      choPhepHoanTien,
     );
     await this.nhatKy.ghiNhan({ taiKhoanId: nguoiDung.taiKhoanId, hanhDong, doiTuong: 'DAT_BAN', doiTuongId: id, duLieuCu: cu, duLieuMoi: moi, maYeuCau });
 
@@ -234,35 +285,6 @@ export class DatBanWorkflowService {
     return moi;
   }
 
-  private async coQuyenHoanTien(
-    vaiTroId: string,
-  ): Promise<boolean> {
-    const quyen = await this.prisma.quyen.findUnique({
-      where: {
-        ma_quyen: 'HOAN_TIEN_THUC_HIEN',
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!quyen) {
-      return false;
-    }
-
-    const lienKet = await this.prisma.vai_tro_quyen.findFirst({
-      where: {
-        vai_tro_id: BigInt(vaiTroId),
-        quyen_id: quyen.id,
-      },
-      select: {
-        vai_tro_id: true,
-      },
-    });
-
-    return Boolean(lienKet);
-  }
-
   private async chuyenTrangThaiNoiBo(
     datBanId: bigint,
     trangThaiMoi: string,
@@ -270,7 +292,6 @@ export class DatBanWorkflowService {
     taiKhoanId: bigint | null,
     ghiChu?: string,
     tyLeHoanTien?: number,
-    choPhepHoanTien = false,
   ) {
     const canKhoaBan = ['DA_CHECK_IN', 'DA_HOAN_THANH'].includes(trangThaiMoi);
     const banIds = canKhoaBan
@@ -355,7 +376,6 @@ export class DatBanWorkflowService {
           tyLeHoanTien,
           ghiChu?.trim() || 'Hủy đặt bàn',
           taiKhoanId,
-          choPhepHoanTien,
         );
       }
 

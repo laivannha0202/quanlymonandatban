@@ -90,7 +90,7 @@ const muc = [
     key: '/quan-tri/ban-an',
     icon: <AppstoreOutlined />,
     label: 'Bàn ăn',
-    quyen: 'BAN_AN_XEM',
+    quyen: ['BAN_AN_XEM', 'KHU_VUC_XEM'],
     nhom: 'van-hanh',
   },
   {
@@ -104,7 +104,7 @@ const muc = [
     key: '/quan-tri/mon-an',
     icon: <ShopOutlined />,
     label: 'Món ăn',
-    quyen: 'MON_AN_XEM',
+    quyen: ['MON_AN_XEM', 'DANH_MUC_MON_XEM'],
     nhom: 'noi-dung',
   },
   {
@@ -184,14 +184,25 @@ const tenNhom: Record<string, string> = {
 export function BoCucQuanTri() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { nguoiDung, dangXuat, coQuyen } = useXacThuc();
+  const {
+    nguoiDung,
+    dangXuat,
+    coTatCaQuyen,
+  } = useXacThuc();
   const screens = Grid.useBreakpoint();
   const [moMenu, setMoMenu] = useState(false);
   const [thuGon, setThuGon] = useState(false);
 
   const mucHienThi = useMemo(
-    () => muc.filter((item) => coQuyen(item.quyen)),
-    [coQuyen, nguoiDung?.quyen],
+    () =>
+      muc.filter((item) =>
+        coTatCaQuyen(
+          Array.isArray(item.quyen)
+            ? [...item.quyen]
+            : [item.quyen],
+        ),
+      ),
+    [coTatCaQuyen, nguoiDung?.quyen],
   );
 
   const selected =

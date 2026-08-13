@@ -46,6 +46,16 @@ export interface KhuVucQuanTri {
   trangThai: TrangThaiHoatDong;
 }
 
+export interface LichDatGanNhatCuaBan {
+  id: string;
+  maDatBan: string;
+  hoTen: string;
+  soNguoi: number;
+  gioBatDau: string;
+  gioKetThuc: string;
+  trangThai: 'CHO_XAC_NHAN' | 'DA_XAC_NHAN' | 'DA_CHECK_IN';
+}
+
 export interface BanAnQuanTri {
   id: string;
   maBan: string;
@@ -58,6 +68,7 @@ export interface BanAnQuanTri {
   viTriY?: number | null;
   trangThai: TrangThaiBanAn;
   ghiChu?: string | null;
+  lichDatGanNhat?: LichDatGanNhatCuaBan | null;
 }
 
 export interface LienKetBanQuanTri {
@@ -128,6 +139,11 @@ export interface NgayDacBietQuanTri {
   gioDongCua?: string | null;
   ghiChu?: string | null;
 }
+
+export type HuyDatBanQuanTriPayload = {
+  nguonHuy: 'KHACH_YEU_CAU' | 'NHA_HANG_CHU_DONG';
+  lyDo?: string;
+};
 
 export type TaoDatBanQuanTriPayload = {
   hoTen: string;
@@ -249,9 +265,22 @@ export const quanTriApi = {
       xacThuc: true,
       body: JSON.stringify(duLieu),
     }),
-  chuyenTrangThaiDatBan: (id: string, hanhDong: 'xac-nhan' | 'check-in' | 'hoan-thanh' | 'khong-den' | 'huy') =>
+  chuyenTrangThaiDatBan: (
+    id: string,
+    hanhDong: 'xac-nhan' | 'check-in' | 'hoan-thanh' | 'khong-den' | 'huy',
+    huyPayload?: HuyDatBanQuanTriPayload,
+  ) =>
     goiApi<DatBan>(`/quan-tri/dat-ban/${id}/${hanhDong}`, {
-      method: 'PATCH', xacThuc: true, body: hanhDong === 'huy' ? JSON.stringify({}) : undefined,
+      method: 'PATCH',
+      xacThuc: true,
+      body:
+        hanhDong === 'huy'
+          ? JSON.stringify(
+              huyPayload ?? {
+                nguonHuy: 'KHACH_YEU_CAU',
+              },
+            )
+          : undefined,
     }),
 
   khuVuc: (p: { tuKhoa?: string; trangThai?: TrangThaiHoatDong } = {}) =>

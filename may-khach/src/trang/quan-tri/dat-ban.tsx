@@ -33,7 +33,11 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useState } from 'react';
-import { quanTriApi, type TaoDatBanQuanTriPayload } from '@/dich-vu/quan-tri.api';
+import {
+  quanTriApi,
+  type HuyDatBanQuanTriPayload,
+  type TaoDatBanQuanTriPayload,
+} from '@/dich-vu/quan-tri.api';
 import { datBanApi } from '@/dich-vu/dat-ban.api';
 import { LoiApi } from '@/dich-vu/http';
 import type { BanAnPhuongAn, DatBan } from '@/kieu/nghiep-vu';
@@ -228,7 +232,7 @@ function canhBaoQuaGio(r: DatBan) {
 
 export function QuanTriDatBan() {
   const { message, modal } = App.useApp();
-  const { coQuyen } = useXacThuc();
+  const { coQuyen, nguoiDung } = useXacThuc();
   const qc = useQueryClient();
 
   const [trangThai, setTrangThai] = useState<string>();
@@ -296,8 +300,20 @@ export function QuanTriDatBan() {
   });
 
   const mutation = useMutation({
-    mutationFn: ({ id, hanhDong }: { id: string; hanhDong: HanhDong }) =>
-      quanTriApi.chuyenTrangThaiDatBan(id, hanhDong),
+    mutationFn: ({
+      id,
+      hanhDong,
+      huyPayload,
+    }: {
+      id: string;
+      hanhDong: HanhDong;
+      huyPayload?: HuyDatBanQuanTriPayload;
+    }) =>
+      quanTriApi.chuyenTrangThaiDatBan(
+        id,
+        hanhDong,
+        huyPayload,
+      ),
     onSuccess: async () => {
       message.success('Đã cập nhật đặt bàn');
       await Promise.all([
@@ -330,14 +346,117 @@ export function QuanTriDatBan() {
   });
 
   const hanhDong = (r: DatBan, hd: HanhDong) => {
-    const lam = () => mutation.mutateAsync({ id: r.id, hanhDong: hd });
+    if (hd === 'huy') {
+      let nguonHuy: HuyDatBanQuanTriPayload['nguonHuy'] =
+        'KHACH_YEU_CAU';
+      let lyDo = '';
 
-    const cauHoi: Record<HanhDong, { title: string; ok: string; danger?: boolean }> = {
-      'xac-nhan': { title: 'Xác nhận đặt bàn này?', ok: 'Xác nhận' },
-      'check-in': { title: 'Xác nhận khách đã đến?', ok: 'Check-in' },
-      'hoan-thanh': { title: 'Hoàn thành lượt phục vụ này?', ok: 'Hoàn thành' },
-      'khong-den': { title: 'Đánh dấu khách không đến?', ok: 'Không đến' },
-      'huy': { title: 'Hủy đặt bàn này?', ok: 'Hủy đặt bàn', danger: true },
+      modal.confirm({
+        title: 'Hủy đặt bàn này?',
+        width: 560,
+        content: (
+          <div>
+            <strong>{r.maDatBan}</strong>
+            <div>{r.hoTen} · {r.soNguoi} khách</div>
+            <div>
+              {dinhDangNgay(r.ngayDat)} · {dinhDangGio(r.gioBatDau)}
+            </div>
+
+            <Divider />
+
+            <Typography.Text strong>
+              Ai là bên yêu cầu hủy?
+            </Typography.Text>
+            <Radio.Group
+              defaultValue="KHACH_YEU_CAU"
+              className="mt-8"
+              onChange={(event) => {
+                nguonHuy = event.target.value;
+              }}
+            >
+              <Space direction="vertical">
+                <Radio value="KHACH_YEU_CAU">
+                  Khách yêu cầu hủy
+                </Radio>
+                {nguoiDung?.vaiTro.maVaiTro === 'QUAN_TRI_VIEN' ? (
+                  <Radio value="NHA_HANG_CHU_DONG">
+                    Nhà hàng chủ động hủy
+                  </Radio>
+                ) : null}
+              </Space>
+            </Radio.Group>
+
+            <Alert
+              className="mt-12"
+              type="info"
+              showIcon
+              message="Chính sách hoàn tiền"
+              description={
+                <>
+                  Khách yêu cầu hủy: áp dụng thời hạn và tỷ lệ hoàn
+                  theo cấu hình. Nhà hàng chủ động hủy: hoàn 100%
+                  số tiền đã thu và chỉ Admin được ghi nhận nguồn hủy này.
+                  Nhân viên chỉ tiếp nhận yêu cầu hủy từ khách và tạo yêu cầu
+                  hoàn; người có quyền hoàn tiền sẽ xác nhận ở màn
+                  Thanh toán & hoàn tiền.
+                </>
+              }
+            />
+
+            <Input.TextArea
+              className="mt-12"
+              rows={3}
+              maxLength={2000}
+              showCount
+              placeholder="Lý do hủy (không bắt buộc)"
+              onChange={(event) => {
+                lyDo = event.target.value;
+              }}
+            />
+          </div>
+        ),
+        okText: 'Hủy đặt bàn',
+        cancelText: 'Giữ nguyên',
+        okButtonProps: { danger: true },
+        onOk: () =>
+          mutation.mutateAsync({
+            id: r.id,
+            hanhDong: 'huy',
+            huyPayload: {
+              nguonHuy,
+              lyDo: lyDo.trim() || undefined,
+            },
+          }),
+      });
+      return;
+    }
+
+    const lam = () =>
+      mutation.mutateAsync({
+        id: r.id,
+        hanhDong: hd,
+      });
+
+    const cauHoi: Record<
+      Exclude<HanhDong, 'huy'>,
+      { title: string; ok: string; danger?: boolean }
+    > = {
+      'xac-nhan': {
+        title: 'Xác nhận đặt bàn này?',
+        ok: 'Xác nhận',
+      },
+      'check-in': {
+        title: 'Xác nhận khách đã đến?',
+        ok: 'Check-in',
+      },
+      'hoan-thanh': {
+        title: 'Hoàn thành lượt phục vụ này?',
+        ok: 'Hoàn thành',
+      },
+      'khong-den': {
+        title: 'Đánh dấu khách không đến?',
+        ok: 'Không đến',
+      },
     };
 
     const cauHinh = cauHoi[hd];
@@ -348,12 +467,17 @@ export function QuanTriDatBan() {
         <div>
           <strong>{r.maDatBan}</strong>
           <div>{r.hoTen} · {r.soNguoi} khách</div>
-          <div>{dinhDangNgay(r.ngayDat)} · {dinhDangGio(r.gioBatDau)}</div>
+          <div>
+            {dinhDangNgay(r.ngayDat)} · {dinhDangGio(r.gioBatDau)}
+          </div>
         </div>
       ),
       okText: cauHinh.ok,
       cancelText: 'Giữ nguyên',
-      okButtonProps: cauHinh.danger ? { danger: true } : undefined,
+      okButtonProps:
+        cauHinh.danger
+          ? { danger: true }
+          : undefined,
       onOk: lam,
     });
   };

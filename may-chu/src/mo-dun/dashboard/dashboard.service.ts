@@ -4,7 +4,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../co-so-du-lieu/prisma.service';
 import { LoiNghiepVuException } from '../../dung-chung/exception/loi-nghiep-vu.exception';
-import { laNgayHopLe } from '../../dung-chung/tien-ich/ngay-gio';
+import {
+  hienTaiWallClockVietNam,
+  laNgayHopLe,
+} from '../../dung-chung/tien-ich/ngay-gio';
 import { ngayHienTaiVietNam } from '../../dung-chung/tien-ich/ngay-bao-cao';
 
 @Injectable()
@@ -24,6 +27,11 @@ export class DashboardService {
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    // KPI phía trên vẫn theo ngày đang xem, nhưng "lịch phục vụ sắp tới"
+    // phải luôn lấy từ thời điểm hiện tại trở đi. Nếu buộc ngay_dat = ngayChon
+    // thì booking ngày mai sẽ biến mất khỏi dashboard hôm nay.
+    const hienTai = hienTaiWallClockVietNam();
 
     const [
       datBanRows,
@@ -179,11 +187,10 @@ export class DashboardService {
           ON ctdb.dat_ban_id = db.id
         LEFT JOIN ban_an ba
           ON ba.id = ctdb.ban_an_id
-        WHERE db.ngay_dat = ${ngayChon}
+        WHERE db.gio_bat_dau >= ${hienTai}
           AND db.trang_thai IN (
             'CHO_XAC_NHAN',
-            'DA_XAC_NHAN',
-            'DA_CHECK_IN'
+            'DA_XAC_NHAN'
           )
         GROUP BY db.id
         ORDER BY db.gio_bat_dau

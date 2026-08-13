@@ -209,7 +209,7 @@ describe('ThanhToanService', () => {
   });
 
 
-  it('hoàn 100% payment mô phỏng và chuyển payment sang DA_HOAN_TIEN', async () => {
+  it('tạo yêu cầu hoàn 100% ở trạng thái CHO_HOAN, chưa tự xuất tiền', async () => {
     tx.thanh_toan.updateMany.mockResolvedValue({ count: 0 });
     tx.thanh_toan.findMany.mockResolvedValue([
       {
@@ -220,35 +220,40 @@ describe('ThanhToanService', () => {
         trang_thai: 'DA_THANH_TOAN',
       },
     ]);
-    tx.hoan_tien.aggregate
-      .mockResolvedValueOnce({ _sum: { so_tien: null } })
-      .mockResolvedValueOnce({ _sum: { so_tien: 230000 } });
+    tx.hoan_tien.aggregate.mockResolvedValue({
+      _sum: { so_tien: null },
+    });
     tx.hoan_tien.create.mockResolvedValue({
       id: 21n,
       ma_hoan_tien: 'HT-TEST',
       so_tien: 230000,
-      trang_thai: 'DA_HOAN',
+      trang_thai: 'CHO_HOAN',
     });
-    tx.thanh_toan.update.mockResolvedValue({ id: 11n });
 
     const result = await service.hoanTienDatBanTrongTransaction(
       tx as never,
       123n,
       100,
-      'Khách hủy đúng hạn',
+      'Nhà hàng chủ động hủy',
       5n,
       true,
     );
 
     expect(result.tongHoan).toBe(230000);
-    expect(tx.hoan_tien.create).toHaveBeenCalledTimes(1);
-    expect(tx.thanh_toan.update).toHaveBeenCalledWith({
-      where: { id: 11n },
-      data: { trang_thai: 'DA_HOAN_TIEN' },
-    });
+    expect(tx.hoan_tien.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          so_tien: 230000,
+          trang_thai: 'CHO_HOAN',
+          ma_giao_dich_cong: null,
+          thoi_gian_hoan: null,
+        }),
+      }),
+    );
+    expect(tx.thanh_toan.update).not.toHaveBeenCalled();
   });
 
-  it('hỗ trợ tỷ lệ hoàn một phần theo cấu hình', async () => {
+  it('tạo yêu cầu hoàn một phần theo chính sách nhưng chờ duyệt', async () => {
     tx.thanh_toan.updateMany.mockResolvedValue({ count: 0 });
     tx.thanh_toan.findMany.mockResolvedValue([
       {
@@ -259,34 +264,31 @@ describe('ThanhToanService', () => {
         trang_thai: 'DA_THANH_TOAN',
       },
     ]);
-    tx.hoan_tien.aggregate
-      .mockResolvedValueOnce({ _sum: { so_tien: 0 } })
-      .mockResolvedValueOnce({ _sum: { so_tien: 100000 } });
+    tx.hoan_tien.aggregate.mockResolvedValue({
+      _sum: { so_tien: 0 },
+    });
     tx.hoan_tien.create.mockResolvedValue({
       id: 22n,
       ma_hoan_tien: 'HT-PARTIAL',
       so_tien: 100000,
-      trang_thai: 'DA_HOAN',
+      trang_thai: 'CHO_HOAN',
     });
-    tx.thanh_toan.update.mockResolvedValue({ id: 11n });
 
     const result = await service.hoanTienDatBanTrongTransaction(
       tx as never,
       123n,
       50,
-      'Hoàn theo chính sách',
+      'Khách yêu cầu hủy đúng hạn',
       5n,
-      true,
+      false,
     );
 
     expect(result.tongHoan).toBe(100000);
-    expect(tx.thanh_toan.update).toHaveBeenCalledWith({
-      where: { id: 11n },
-      data: { trang_thai: 'HOAN_MOT_PHAN' },
-    });
+    expect(tx.hoan_tien.create).toHaveBeenCalledTimes(1);
+    expect(tx.thanh_toan.update).not.toHaveBeenCalled();
   });
 
-  it('chặn admin không có quyền hoàn tiền khi booking đã thu tiền', async () => {
+  it('nhân viên được hủy booking đã thu tiền và tạo yêu cầu hoàn chờ người có quyền duyệt', async () => {
     tx.thanh_toan.updateMany.mockResolvedValue({ count: 0 });
     tx.thanh_toan.findMany.mockResolvedValue([
       {
@@ -300,19 +302,25 @@ describe('ThanhToanService', () => {
     tx.hoan_tien.aggregate.mockResolvedValue({
       _sum: { so_tien: 0 },
     });
+    tx.hoan_tien.create.mockResolvedValue({
+      id: 23n,
+      ma_hoan_tien: 'HT-PENDING',
+      so_tien: 230000,
+      trang_thai: 'CHO_HOAN',
+    });
 
-    await expect(
-      service.hoanTienDatBanTrongTransaction(
-        tx as never,
-        123n,
-        100,
-        'Admin hủy',
-        5n,
-        false,
-      ),
-    ).rejects.toMatchObject({ maLoi: 'THANH_TOAN_007' });
+    const result = await service.hoanTienDatBanTrongTransaction(
+      tx as never,
+      123n,
+      100,
+      'Nhà hàng chủ động hủy',
+      5n,
+      false,
+    );
 
-    expect(tx.hoan_tien.create).not.toHaveBeenCalled();
+    expect(result.tongHoan).toBe(230000);
+    expect(tx.hoan_tien.create).toHaveBeenCalledTimes(1);
+    expect(tx.thanh_toan.update).not.toHaveBeenCalled();
   });
 
   it('hủy payment pending khi booking hủy nhưng không tạo refund', async () => {

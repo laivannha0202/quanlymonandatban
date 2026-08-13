@@ -349,7 +349,7 @@ export class ThanhToanService {
     tyLeHoanTien: number,
     lyDo: string,
     nguoiThucHienId: bigint | null,
-    choPhepHoanTien: boolean,
+    _choPhepHoanTien?: boolean,
   ) {
     const tyLe = Math.max(0, Math.min(100, Math.round(tyLeHoanTien)));
 
@@ -423,20 +423,11 @@ export class ThanhToanService {
         continue;
       }
 
-      if (!choPhepHoanTien) {
-        throw new LoiNghiepVuException(
-          'THANH_TOAN_007',
-          'Đặt bàn đã thanh toán. Tài khoản hiện tại cần quyền HOAN_TIEN_THUC_HIEN để hủy và hoàn tiền.',
-          HttpStatus.FORBIDDEN,
-        );
-      }
-
-      const laMoPhong = payment.phuong_thuc === 'MO_PHONG';
+      // Hủy booking chỉ tạo yêu cầu hoàn tiền. Quyền xuất tiền thật
+      // được kiểm tra ở endpoint xác nhận hoàn tiền của bộ phận tài chính.
       const maHoanTien = `HT-${randomUUID()}`;
       const khoaIdempotency =
         `HUY_DAT_BAN:${datBanId.toString()}:${payment.id.toString()}`;
-      const thoiGian = new Date();
-
       let refund;
       try {
         refund = await tx.hoan_tien.create({
@@ -445,14 +436,11 @@ export class ThanhToanService {
             thanh_toan_id: payment.id,
             so_tien: soTienHoan,
             ly_do: lyDo,
-            trang_thai: laMoPhong ? 'DA_HOAN' : 'CHO_HOAN',
-            ma_giao_dich_cong:
-              laMoPhong
-                ? `REFUND-MO_PHONG-${randomUUID()}`
-                : null,
+            trang_thai: 'CHO_HOAN',
+            ma_giao_dich_cong: null,
             khoa_idempotency: khoaIdempotency,
             nguoi_thuc_hien_id: nguoiThucHienId,
-            thoi_gian_hoan: laMoPhong ? thoiGian : null,
+            thoi_gian_hoan: null,
           },
           select: {
             id: true,
@@ -478,32 +466,6 @@ export class ThanhToanService {
           throw error;
         }
         refund = existing;
-      }
-
-      if (laMoPhong && refund.trang_thai === 'DA_HOAN') {
-        const tongHoanThanhCong = await tx.hoan_tien.aggregate({
-          where: {
-            thanh_toan_id: payment.id,
-            trang_thai: 'DA_HOAN',
-          },
-          _sum: {
-            so_tien: true,
-          },
-        });
-
-        const tongDaHoan = Math.round(
-          Number(tongHoanThanhCong._sum.so_tien ?? 0),
-        );
-
-        await tx.thanh_toan.update({
-          where: { id: payment.id },
-          data: {
-            trang_thai:
-              tongDaHoan >= soTienDaThu
-                ? 'DA_HOAN_TIEN'
-                : 'HOAN_MOT_PHAN',
-          },
-        });
       }
 
       ketQua.push({
@@ -593,6 +555,7 @@ export class ThanhToanService {
         dat_ban: {
           is: {
             trang_thai: 'CHO_XAC_NHAN',
+            nguon_dat: 'WEBSITE',
           },
         },
       },
@@ -742,7 +705,39 @@ export class ThanhToanService {
     };
 
     const skip = (dto.trang - 1) * dto.kichThuoc;
-    const [rows, tong] = await Promise.all([
+
+    const whereDaThu: Prisma.thanh_toanWhereInput = {
+      AND: [
+        where,
+        {
+          trang_thai: {
+            in: [
+              'DA_THANH_TOAN',
+              'HOAN_MOT_PHAN',
+              'DA_HOAN_TIEN',
+            ],
+          },
+        },
+      ],
+    };
+
+    const whereChoThanhToan: Prisma.thanh_toanWhereInput = {
+      AND: [
+        where,
+        {
+          trang_thai: 'CHO_THANH_TOAN',
+        },
+      ],
+    };
+
+    const [
+      rows,
+      tong,
+      daThuAggregate,
+      daHoanAggregate,
+      choThanhToan,
+      choHoanTien,
+    ] = await Promise.all([
       this.prisma.thanh_toan.findMany({
         where,
         skip,
@@ -787,7 +782,44 @@ export class ThanhToanService {
         },
       }),
       this.prisma.thanh_toan.count({ where }),
+      this.prisma.thanh_toan.aggregate({
+        where: whereDaThu,
+        _sum: {
+          so_tien: true,
+        },
+      }),
+      this.prisma.hoan_tien.aggregate({
+        where: {
+          trang_thai: 'DA_HOAN',
+          thanh_toan: {
+            is: where,
+          },
+        },
+        _sum: {
+          so_tien: true,
+        },
+      }),
+      this.prisma.thanh_toan.count({
+        where: whereChoThanhToan,
+      }),
+      this.prisma.hoan_tien.count({
+        where: {
+          trang_thai: {
+            in: ['CHO_HOAN', 'DANG_XU_LY'],
+          },
+          thanh_toan: {
+            is: where,
+          },
+        },
+      }),
     ]);
+
+    const tongDaThu = Math.round(
+      Number(daThuAggregate._sum.so_tien ?? 0),
+    );
+    const tongDaHoan = Math.round(
+      Number(daHoanAggregate._sum.so_tien ?? 0),
+    );
 
     return {
       danhSach: rows.map((row) => ({
@@ -818,6 +850,14 @@ export class ThanhToanService {
         kichThuoc: dto.kichThuoc,
         tong,
         tongTrang: Math.ceil(tong / dto.kichThuoc),
+      },
+      tongHop: {
+        tongGiaoDich: tong,
+        tongDaThu,
+        tongDaHoan,
+        thucThu: tongDaThu - tongDaHoan,
+        choThanhToan,
+        choHoanTien,
       },
     };
   }
